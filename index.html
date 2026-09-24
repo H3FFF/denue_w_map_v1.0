@@ -47,23 +47,49 @@
             border-radius:5px; font-weight:bold; cursor:pointer; margin:0 4px;
         }
 
-        /* Indicador de sincronización */
+        /* Indicador de sincronización - CENTRADO ARRIBA */
         #sync-status {
-            position:fixed; top:15px; right:15px; z-index:9999;
-            background:white; border-radius:20px; padding:7px 14px;
-            font-size:12px; font-weight:bold;
-            box-shadow:0 2px 10px rgba(0,0,0,0.2);
-            border:2px solid #ddd;
-            display:flex; align-items:center; gap:6px;
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: white;
+            border-radius: 12px;
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            border: 2px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 220px;
+            justify-content: center;
         }
-        #sync-dot { width:10px; height:10px; border-radius:50%; background:#95a5a6; }
+        #sync-dot { width:10px; height:10px; border-radius:50%; background:#95a5a6; flex-shrink:0; }
         #sync-dot.ok      { background:#27ae60; }
         #sync-dot.saving  { background:#f39c12; animation:pulse 0.8s infinite; }
         #sync-dot.error   { background:#e74c3c; }
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+        #last-update { font-size:10px; font-weight:normal; color:#666; margin-top:2px; text-align:center; }
 
-        /* Toast */
-        .toast { position:fixed; top:60px; right:15px; z-index:99999; background:#27ae60; color:white; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:none; }
+        /* Toast - también centrado */
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            background: #27ae60;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+        }
         .toast.error { background:#e74c3c; }
 
         /* Loading */
@@ -80,7 +106,10 @@
 
 <div id="sync-status">
     <div id="sync-dot"></div>
-    <span id="sync-text">Conectando...</span>
+    <div>
+        <div id="sync-text">Conectando...</div>
+        <div id="last-update"></div>
+    </div>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -90,8 +119,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
-// ============================================================
-// URL de tu Apps Script (NO la cambies si es la misma)
 // ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec";
 
@@ -119,6 +146,13 @@ function setSyncStatus(estado, texto) {
     document.getElementById('sync-text').textContent = texto;
 }
 
+function actualizarUltimaActualizacion() {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const hora  = ahora.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('last-update').textContent = `Última actualización: ${fecha} ${hora}`;
+}
+
 function mostrarToast(msg, esError = false) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -128,29 +162,39 @@ function mostrarToast(msg, esError = false) {
 }
 
 // ============================================================
-// Leer status desde Google Sheets (GET) - FUENTE DE VERDAD
-// ============================================================
 async function cargarStatusSheet() {
     try {
         setSyncStatus('saving', 'Sincronizando...');
-        const resp = await fetch(APPS_SCRIPT_URL);
+        
+        const url = APPS_SCRIPT_URL + '?t=' + Date.now();
+        
+        const resp = await fetch(url, {
+            method: 'GET',
+            cache: 'no-store'
+        });
+        
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        
         const json = await resp.json();
-        if (json.ok) {
-            statusSheet = json.data || {};
-            setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
+        console.log('Respuesta de Sheets:', json);
+        
+        if (json.ok && json.data) {
+            statusSheet = json.data;
+            const cantidad = Object.keys(statusSheet).length;
+            setSyncStatus('ok', `Sincronizado · ${cantidad} registros`);
+            actualizarUltimaActualizacion();
+            console.log('Status aplicados desde Sheets:', statusSheet);
             return true;
         } else {
-            throw new Error(json.error || 'Error desconocido');
+            throw new Error(json.error || 'Respuesta no válida');
         }
     } catch(e) {
         setSyncStatus('error', 'Sin conexión a Sheets');
-        console.warn('Error al leer Sheets:', e);
+        console.error('Error al leer Sheets:', e);
         return false;
     }
 }
 
-// ============================================================
-// Escribir status a Google Sheets (POST)
 // ============================================================
 async function guardarStatusSheet(id, newStatus) {
     try {
@@ -162,6 +206,7 @@ async function guardarStatusSheet(id, newStatus) {
         if (!json.ok) throw new Error(json.error || 'Error al guardar');
         statusSheet[id] = newStatus;
         setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
+        actualizarUltimaActualizacion();
         return true;
     } catch(e) {
         setSyncStatus('error', 'Error al guardar');
@@ -232,8 +277,6 @@ function buildPopup(row) {
 }
 
 // ============================================================
-// Confirmación de cambio
-// ============================================================
 window.prepararCambio = function(id, newStatus) {
     pendingStatus[id] = newStatus;
     const box = document.getElementById(`confirm-${id}`);
@@ -270,7 +313,6 @@ window.updateStatus = async function(id, newStatus) {
     const badgeElem = document.getElementById('badge-' + id);
     const oldStatus = statusTextElem ? statusTextElem.innerText.trim() : 'DESCONOCIDO';
 
-    // Actualizar UI inmediatamente
     if (statusTextElem) {
         statusTextElem.innerText = newStatus;
         const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12','NO DISPONIBLE':'#607D8B' };
@@ -284,18 +326,15 @@ window.updateStatus = async function(id, newStatus) {
         popup.style.borderLeft = cfg ? `5px solid ${cfg.color}` : 'none';
     }
 
-    // Actualizar en memoria
     const dataIdx = allData.findIndex(d => d.id === id);
     if (dataIdx !== -1) allData[dataIdx].status = newStatus;
 
-    // Guardar en Sheets
     const ok = await guardarStatusSheet(id, newStatus);
     btns.forEach(b => b.disabled = false);
 
     if (ok) {
         mostrarToast(`✅ ${newStatus} guardado en Sheets`);
     } else {
-        // Revertir si falló
         if (statusTextElem) {
             statusTextElem.innerText = oldStatus;
             const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12','NO DISPONIBLE':'#607D8B' };
@@ -341,7 +380,6 @@ function construirCapas(data) {
 
     const overlays = {};
 
-    // Capas por CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
         const cl = L.markerClusterGroup({
@@ -352,7 +390,6 @@ function construirCapas(data) {
         overlays[`CP_${cp}`] = cl;
     });
 
-    // Capas por Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
         const cl = L.markerClusterGroup({
@@ -363,7 +400,6 @@ function construirCapas(data) {
         overlays[`MUN_${mun}`] = cl;
     });
 
-    // Capas por Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
         const cl = L.markerClusterGroup({
@@ -374,7 +410,6 @@ function construirCapas(data) {
         overlays[`ST_${st}`] = cl;
     });
 
-    // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
         if (row.status === 'INTERESADO')  peso = 3;
@@ -385,7 +420,6 @@ function construirCapas(data) {
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
 
-    // Mapas base (solo gratuitos, sin API key)
     const baseLayers = {
         'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap'
@@ -405,8 +439,6 @@ function construirCapas(data) {
 }
 
 // ============================================================
-// INIT - AUTÓNOMO (Sheets es la fuente de verdad del status)
-// ============================================================
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
 
@@ -415,16 +447,13 @@ window.addEventListener('load', async function () {
     }).addTo(map);
 
     try {
-        // 1. Cargar datos base (ubicaciones, nombres, etc.)
         const resp = await fetch('datos.json');
         if (!resp.ok) throw new Error('No se pudo cargar datos.json');
         const data = await resp.json();
         allData = data.datos;
 
-        // 2. Cargar status en vivo desde Sheets (prioridad máxima)
         const ok = await cargarStatusSheet();
 
-        // 3. Aplicar status de Sheets sobre los datos
         let aplicados = 0;
         allData.forEach(item => {
             if (statusSheet[item.id]) {
@@ -437,7 +466,6 @@ window.addEventListener('load', async function () {
             ? `✅ ${aplicados} status cargados en vivo desde Sheets`
             : '⚠️ No se pudo conectar a Sheets. Usando status del JSON');
 
-        // 4. Construir el mapa
         construirCapas(allData);
         document.getElementById('loading').style.display = 'none';
 
