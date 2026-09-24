@@ -167,22 +167,20 @@
         };
         
         function initMap() {
+            // Inicializar mapa centrado en México (ajusta coordenadas si es necesario)
             map = L.map('map').setView([19.4326, -99.1332], 11);
             
+            // Capa base única (CartoDB Positron - Claro y limpio)
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO', name: 'Claro'
+                attribution: '&copy; CARTO',
+                maxZoom: 19
             }).addTo(map);
             
-            L.control.layers({
-                'Claro': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'),
-                'Oscuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
-                'Satélite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
-            }).addTo(map);
+            // Nota: Se eliminaron las capas adicionales y el control de capas para mayor limpieza
         }
         
         async function cargarDatos() {
             try {
-                // Usa fetch relativo para que funcione en GitHub Pages
                 const response = await fetch('datos.json');
                 if (!response.ok) throw new Error("No se pudo cargar datos.json");
                 
