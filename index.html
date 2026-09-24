@@ -74,7 +74,7 @@
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
         #last-update { font-size:10px; font-weight:normal; color:#666; margin-top:2px; text-align:center; }
 
-        /* Toast - también centrado */
+        /* Toast - centrado */
         .toast {
             position: fixed;
             top: 70px;
@@ -380,6 +380,7 @@ function construirCapas(data) {
 
     const overlays = {};
 
+    // Capas por CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
         const cl = L.markerClusterGroup({
@@ -390,6 +391,7 @@ function construirCapas(data) {
         overlays[`CP_${cp}`] = cl;
     });
 
+    // Capas por Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
         const cl = L.markerClusterGroup({
@@ -400,6 +402,7 @@ function construirCapas(data) {
         overlays[`MUN_${mun}`] = cl;
     });
 
+    // Capas por Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
         const cl = L.markerClusterGroup({
@@ -410,6 +413,7 @@ function construirCapas(data) {
         overlays[`ST_${st}`] = cl;
     });
 
+    // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
         if (row.status === 'INTERESADO')  peso = 3;
@@ -420,18 +424,10 @@ function construirCapas(data) {
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
 
+    // Solo OpenStreetMap
     const baseLayers = {
         'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap'
-        }),
-        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO'
-        }),
-        'CartoDB Voyager': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO'
-        }),
-        'CartoDB Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO'
         })
     };
 
@@ -442,6 +438,7 @@ function construirCapas(data) {
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
 
+    // Solo OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
