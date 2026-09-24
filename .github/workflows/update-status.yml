@@ -51,13 +51,13 @@ jobs:
               data = resp.json()
               
               if not data.get("ok") or not isinstance(data.get("data"), dict):
-                  print("❌ Respuesta inválida de Sheets")
+                  print(" Respuesta inválida de Sheets")
                   exit(1)
               
               status_sheet = data["data"]
-              print(f"✅ {len(status_sheet)} status recibidos de Sheets")
+              print(f" {len(status_sheet)} status recibidos de Sheets")
           except Exception as e:
-              print(f"❌ Error al consultar Sheets: {e}")
+              print(f"Error al consultar Sheets: {e}")
               exit(1)
 
           with open(JSON_FILE, "r", encoding="utf-8") as f:
@@ -72,14 +72,14 @@ jobs:
                       item["status"] = nuevo
                       actualizados += 1
 
-          print(f"✅ {actualizados} registros actualizados en el JSON")
+          print(f" {actualizados} registros actualizados en el JSON")
 
           contenido["ultima_actualizacion"] = datetime.now().isoformat()
 
           with open(JSON_FILE, "w", encoding="utf-8") as f:
               json.dump(contenido, f, ensure_ascii=False, indent=2)
 
-          print("💾 datos.json actualizado correctamente")
+          print(" datos.json actualizado correctamente")
           EOF
 
       - name: Commit y push
@@ -88,6 +88,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No hay cambios que commitear"
           else
-            git commit -m "🔄 Actualizar status desde Google Sheets $(date +'%Y-%m-%d %H:%M')"
+            git commit -m " Actualizar status desde Google Sheets $(date +'%Y-%m-%d %H:%M')"
             git push origin main
           fi
