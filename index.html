@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hub Delivery MX - Mapa Interactivo</title>
+    
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     
@@ -11,27 +13,96 @@
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
+        /* PANEL DE FILTROS - Inferior Izquierda */
         .filter-panel {
-            position: absolute; bottom: 30px; left: 30px; z-index: 1000;
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 280px; border: 3px solid #1a5276;
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 280px;
+            border: 3px solid #1a5276; /* Borde destacado */
         }
-        .filter-panel h3 { margin: 0 0 15px 0; color: #1a5276; font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .filter-group { margin-bottom: 12px; }
-        .filter-group label { display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold; color: #555; }
-        .filter-group select { width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 13px; background: #fff; }
         
-        .btn-apply { width: 100%; padding: 10px; background: #1a5276; color: white; border: 2px solid #0d2a40; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .filter-panel h3 {
+            margin: 0 0 15px 0;
+            color: #1a5276;
+            font-size: 16px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .filter-group { margin-bottom: 12px; }
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd; /* Borde destacado en inputs */
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+        }
+        
+        .btn-apply {
+            width: 100%; 
+            padding: 10px; 
+            background: #1a5276; 
+            color: white; 
+            border: 2px solid #0d2a40; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background 0.3s;
+        }
         .btn-apply:hover { background: #2c3e50; }
 
-        /* Estilos para marcadores de color */
-        .custom-marker {
-            width: 24px; height: 24px; border-radius: 50%;
-            border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px; color: white; font-weight: bold;
+        /* BOTONES DE STATUS EN POPUP */
+        .status-btn {
+            border: 2px solid transparent; /* Borde base */
+            padding: 6px 12px;
+            margin: 3px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
+        .status-btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        
+        /* Colores específicos con bordes más oscuros para destacar */
+        .btn-interesado { background-color: #FF007F; border-color: #cc0066; }
+        .btn-pickup { background-color: #00C853; border-color: #00963e; }
+        .btn-no { background-color: #9E9E9E; border-color: #757575; }
+        .btn-contactado { background-color: #3498db; border-color: #2980b9; } /* Azul preferido */
+        .btn-sinresp { background-color: #f39c12; border-color: #d35400; }
 
+        /* ANIMACIONES DE MARCADORES */
+        .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+        .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
+        .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
+        .marker-radar-ring:nth-child(1){ animation-delay:0s; } .marker-radar-ring:nth-child(2){ animation-delay:0.6s; } .marker-radar-ring:nth-child(3){ animation-delay:1.2s; }
+        @keyframes radar-wave { 0% { transform:scale(0.3); opacity:1; border-color:#FF007F; } 70% { opacity:0.7; border-color:#FF6600; } 100%{ transform:scale(2.8); opacity:0; border-color:#FF007F; } }
+
+        .marker-bounce-wrapper { display:flex; align-items:center; justify-content:center; animation:bounce-anim 0.8s ease-in-out infinite alternate; }
+        @keyframes bounce-anim { 0% { transform:translateY(0px); } 100%{ transform:translateY(-10px); } }
+        .marker-bounce-core { width:28px; height:28px; border-radius:70%; background:linear-gradient(135deg,#00C853,#00BCD4); border:3px solid white; box-shadow:0 0 10px rgba(0,200,83,0.8); display:flex; align-items:center; justify-content:center; font-size:14px; }
+
+        .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
+
+        /* LOADING */
         .loading {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 9999; background: white; padding: 30px; border-radius: 15px;
@@ -52,18 +123,10 @@
     
     <div id="map"></div>
     
+    <!-- Panel de Filtros -->
     <div class="filter-panel">
-        <h3><i class="fas fa-filter"></i> Filtros y Colores</h3>
+        <h3><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
         
-        <div class="filter-group">
-            <label>Modo de Color:</label>
-            <select id="modo-color" onchange="aplicarFiltros()">
-                <option value="status">Por Status (Animados)</option>
-                <option value="municipio">Por Municipio (Colores)</option>
-                <option value="cp">Por Código Postal (Colores)</option>
-            </select>
-        </div>
-
         <div class="filter-group">
             <label>Municipio:</label>
             <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
@@ -74,15 +137,27 @@
             <select id="filtro-cp"><option value="">Todos los CP</option></select>
         </div>
         
+        <div class="filter-group">
+            <label>Status Actual:</label>
+            <select id="filtro-status">
+                <option value="">Todos los status</option>
+                <option value="INTERESADO">📡 INTERESADO</option>
+                <option value="PICK UP">🚀 PICK UP</option>
+                <option value="CONTACTADO">📞 CONTACTADO</option>
+                <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
+                <option value="NO INTERESADO">⛔ NO INTERESADO</option>
+            </select>
+        </div>
+        
         <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
     </div>
 
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
         let map, markers = [], allData = [], cambiosStatus = {};
         
-        // Configuración de status para modo animado
         const STATUS_CONFIG = {
             "INTERESADO": { emoji: "📡", color: "#FF007F", tipo: "radar" },
             "PICK UP": { emoji: "🚀", color: "#00C853", tipo: "bounce" },
@@ -93,23 +168,34 @@
         
         function initMap() {
             map = L.map('map').setView([19.4326, -99.1332], 11);
+            
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO', maxZoom: 19
+                attribution: '&copy; CARTO', name: 'Claro'
+            }).addTo(map);
+            
+            L.control.layers({
+                'Claro': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'),
+                'Oscuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
+                'Satélite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
             }).addTo(map);
         }
         
         async function cargarDatos() {
             try {
+                // Usa fetch relativo para que funcione en GitHub Pages
                 const response = await fetch('datos.json');
                 if (!response.ok) throw new Error("No se pudo cargar datos.json");
+                
                 const data = await response.json();
                 allData = data.datos;
+                
                 poblarFiltros();
-                aplicarFiltros(); // Carga inicial con modo por defecto
+                crearMarcadores(allData);
                 document.getElementById('loading').style.display = 'none';
+                
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error al cargar datos.json.');
+                alert('Error al cargar datos.json. Asegúrate de que el archivo existe en el repositorio.');
             }
         }
         
@@ -136,29 +222,21 @@
                 }
             });
         }
-
-        // Función para crear iconos de color sólido (para Municipio/CP)
-        function crearIconoColor(colorHex) {
-            return L.divIcon({
-                className: '',
-                html: `<div class="custom-marker" style="background-color: ${colorHex};"></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
-        }
-
-        // Función para crear iconos animados (para Status)
-        function crearIconoStatus(status) {
+        
+        function crearIcono(status) {
             const config = STATUS_CONFIG[status];
-            if (!config) return L.icon({ iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png' });
+            if (!config) return L.icon({
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                iconSize: [25, 41], iconAnchor: [12, 41]
+            });
             
             let html = '';
             if (config.tipo === 'radar') {
                 html = `<div class="marker-radar-wrapper"><div class="marker-radar-ring"></div><div class="marker-radar-ring"></div><div class="marker-radar-ring"></div><div class="marker-radar-core">!</div></div>`;
-                return L.divIcon({ className: '', html: html, iconSize: [44, 44], iconAnchor: [22, 22] });
             } else if (config.tipo === 'bounce') {
                 html = `<div class="marker-bounce-wrapper"><div class="marker-bounce-core">🚀</div></div>`;
-                return L.divIcon({ className: '', html: html, iconSize: [34, 34], iconAnchor: [17, 17] });
+            } else if (config.tipo === 'opaco') {
+                html = `<div class="marker-opaco-core">⛔</div>`;
             } else {
                 return L.divIcon({
                     className: '',
@@ -166,54 +244,140 @@
                     iconSize: [30, 30], iconAnchor: [15, 15]
                 });
             }
+            
+            return L.divIcon({
+                className: '', html: html,
+                iconSize: config.tipo === 'radar' ? [44, 44] : [30, 30],
+                iconAnchor: config.tipo === 'radar' ? [22, 22] : [15, 15]
+            });
         }
         
         function generarPopup(row) {
-            // Popup simplificado para este ejemplo
+            const config = STATUS_CONFIG[row.status];
+            const color = config ? config.color : '#ccc';
+            const emoji = config ? config.emoji : '';
+            
+            const waButton = row.whatsapp_link ? `
+                <div style="margin-top:12px; text-align:center;">
+                    <a href="${row.whatsapp_link}" target="_blank" style="text-decoration:none;">
+                        <div style="background:#25D366; color:white; padding:8px 15px; border-radius:20px; font-weight:bold; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2); font-size:12px;">
+                            <i class="fab fa-whatsapp" style="font-size:16px;"></i> Contactar por WhatsApp
+                        </div>
+                    </a>
+                </div>` : '';
+            
+            const changeButtons = `
+                <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                    <p style="font-size:11px; color:#666; margin-bottom:5px;"><b>Cambiar Status:</b></p>
+                    <button class="status-btn btn-interesado" onclick="updateStatus('${row.id}', 'INTERESADO')">📡 INTERESADO</button>
+                    <button class="status-btn btn-pickup" onclick="updateStatus('${row.id}', 'PICK UP')">🚀 PICK UP</button>
+                    <button class="status-btn btn-contactado" onclick="updateStatus('${row.id}', 'CONTACTADO')">📞 CONTACTADO</button>
+                    <button class="status-btn btn-sinresp" onclick="updateStatus('${row.id}', 'SIN RESPUESTA')">💤 SIN RESPUESTA</button>
+                    <button class="status-btn btn-no" onclick="updateStatus('${row.id}', 'NO INTERESADO')">⛔ NO INTERESADO</button>
+                </div>`;
+            
             return `
-                <div style="font-family:Arial,sans-serif; min-width:240px; font-size:13px; border-left:5px solid ${row.color_municipio}; padding-left:10px;">
-                    <b style="font-size:15px; color:#1a5276;">${row.nom_estab}</b><br>
-                    <b>Status:</b> ${row.status}<br>
-                    <b>Municipio:</b> ${row.municipio}<br>
-                    <b>CP:</b> ${row.cod_postal}<br>
-                    <b>Teléfono:</b> ${row.telefono}
+                <div style="font-family:Arial,sans-serif; min-width:240px; font-size:13px; border-left:5px solid ${color}; padding-left:10px;">
+                    <div style="background:linear-gradient(135deg,${color},${color}dd); color:white; font-weight:bold; padding:5px 12px; border-radius:20px; display:inline-block; margin-bottom:8px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+                        ${emoji} ${row.status || 'SIN STATUS'}
+                    </div><br>
+                    <b style="font-size:15px; color:#1a5276;">${row.nom_estab}</b><br><br>
+                    <b>Razón Social:</b> ${row.raz_social}<br>
+                    <b>Dirección:</b> ${row.nom_vial} ${row.numero_ext}<br>
+                    <b>C.P.:</b> ${row.cod_postal} | <b>Mun:</b> ${row.municipio}<br>
+                    <b>Teléfono:</b> ${row.telefono}<br>
+                    ${waButton}
+                    ${changeButtons}
                 </div>`;
         }
         
-        function aplicarFiltros() {
+        function crearMarcadores(data) {
             markers.forEach(m => map.removeLayer(m));
             markers = [];
             
-            const municipio = document.getElementById('filtro-municipio').value;
-            const cp = document.getElementById('filtro-cp').value;
-            const modoColor = document.getElementById('modo-color').value;
-            
-            let filtered = allData;
-            if (municipio) filtered = filtered.filter(d => d.municipio === municipio);
-            if (cp) filtered = filtered.filter(d => d.cod_postal === cp);
-            
-            filtered.forEach(row => {
+            data.forEach(row => {
                 if (!row.latitud || !row.longitud) return;
-                
-                let icon;
-                if (modoColor === 'municipio') {
-                    icon = crearIconoColor(row.color_municipio);
-                } else if (modoColor === 'cp') {
-                    icon = crearIconoColor(row.color_cp);
-                } else {
-                    icon = crearIconoStatus(row.status);
-                }
-
-                const marker = L.marker([row.latitud, row.longitud], { icon: icon });
+                const marker = L.marker([row.latitud, row.longitud], { icon: crearIcono(row.status) });
                 marker.bindPopup(generarPopup(row));
                 marker.addTo(map);
                 markers.push(marker);
             });
         }
         
+        window.updateStatus = function(id, newStatus) {
+            const dataIndex = allData.findIndex(d => d.id === id);
+            if (dataIndex !== -1) {
+                const oldStatus = allData[dataIndex].status;
+                
+                // Registrar cambio con auditoría completa
+                cambiosStatus[id] = {
+                    "status_anterior": oldStatus,
+                    "status_nuevo": newStatus,
+                    "contactado": newStatus === 'CONTACTADO' ? 'Si' : 'No',
+                    "sin_respuesta": newStatus === 'SIN RESPUESTA' ? 'Si' : 'No',
+                    "timestamp": new Date().toISOString()
+                };
+                
+                allData[dataIndex].status = newStatus;
+                
+                // Actualizar marcador visualmente
+                const marker = markers.find(m => m._popup._content.includes(id));
+                if (marker) {
+                    marker.setIcon(crearIcono(newStatus));
+                    marker.setPopupContent(generarPopup(allData[dataIndex]));
+                    
+                    // Efecto visual de sombra azul al cambiar
+                    marker.getElement().style.filter = "drop-shadow(0 0 10px #3498db)";
+                    setTimeout(() => { if(marker.getElement()) marker.getElement().style.filter = ""; }, 1500);
+                }
+            }
+        };
+        
+        function aplicarFiltros() {
+            const municipio = document.getElementById('filtro-municipio').value;
+            const cp = document.getElementById('filtro-cp').value;
+            const status = document.getElementById('filtro-status').value;
+            
+            let filtered = allData;
+            if (municipio) filtered = filtered.filter(d => d.municipio === municipio);
+            if (cp) filtered = filtered.filter(d => d.cod_postal === cp);
+            if (status) filtered = filtered.filter(d => d.status === status);
+            
+            crearMarcadores(filtered);
+        }
+        
+        function descargarCambios() {
+            if (Object.keys(cambiosStatus).length === 0) {
+                alert('No has realizado ningún cambio de status.');
+                return;
+            }
+            
+            const jsonStr = JSON.stringify(cambiosStatus, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cambios_status_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
         window.addEventListener('load', function() {
             initMap();
             cargarDatos();
+            
+            setTimeout(function() {
+                const container = document.querySelector('.leaflet-container');
+                if (container) {
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar Cambios JSON';
+                    downloadBtn.style.cssText = 'position:absolute; bottom:30px; right:30px; z-index:9999; background:#1a5276; color:white; padding:12px 20px; border:3px solid #FFD700; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3); font-size:14px;';
+                    downloadBtn.onclick = descargarCambios;
+                    container.appendChild(downloadBtn);
+                }
+            }, 1000);
         });
     </script>
 </body>
