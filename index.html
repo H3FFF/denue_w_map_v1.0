@@ -11,7 +11,6 @@
         body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
         #map { height:100vh; width:100%; }
 
-        /* Marcadores animados */
         .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
         .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
         .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
@@ -22,7 +21,7 @@
         .marker-bounce-core { width:28px; height:28px; border-radius:70%; background:linear-gradient(135deg,#00C853,#00BCD4); border:3px solid white; box-shadow:0 0 10px rgba(0,200,83,0.8); display:flex; align-items:center; justify-content:center; font-size:14px; }
         .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
 
-        /* Botones de status */
+
         .status-btn { border:none; padding:5px 10px; margin:2px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; transition:opacity 0.2s; }
         .status-btn:hover { opacity:0.8; }
         .status-btn:disabled { opacity:0.5; cursor:wait; }
@@ -32,7 +31,7 @@
         .btn-contactado  { background-color:#3498db; }
         .btn-sinresp     { background-color:#f39c12; }
 
-        /* Caja de confirmación */
+
         .confirm-box {
             margin-top:12px; padding:12px; background:#f8f9fa;
             border:2px solid #1a5276; border-radius:8px; text-align:center; display:none;
@@ -47,7 +46,7 @@
             border-radius:5px; font-weight:bold; cursor:pointer; margin:0 4px;
         }
 
-        /* Indicador de sincronización - CENTRADO ARRIBA */
+
         #sync-status {
             position: fixed;
             top: 15px;
@@ -74,7 +73,7 @@
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
         #last-update { font-size:10px; font-weight:normal; color:#666; margin-top:2px; text-align:center; }
 
-        /* Toast */
+
         .toast {
             position: fixed;
             top: 70px;
@@ -92,12 +91,12 @@
         }
         .toast.error { background:#e74c3c; }
 
-        /* Loading */
+
         .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
         .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
         @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
 
-        /* ===== BOTÓN Y MODAL DE CAMBIOS ===== */
+
         #btn-cambios {
             position: fixed;
             bottom: 25px;
@@ -203,12 +202,12 @@
 <div id="toast" class="toast"></div>
 <div id="map"></div>
 
-<!-- Botón Ver cambios -->
+
 <button id="btn-cambios" onclick="abrirModalCambios()">
     📋 Ver cambios
 </button>
 
-<!-- Modal de cambios -->
+
 <div id="modal-cambios">
     <div class="modal-content">
         <div class="modal-header">
@@ -225,7 +224,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
-// ============================================================
+
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec";
 
 const STATUS_CONFIG = {
@@ -245,7 +244,7 @@ let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null, layerCon
 let pendingStatus = {};
 let cambiosAplicados = [];   // Lista de cambios para el modal
 
-// ============================================================
+
 function setSyncStatus(estado, texto) {
     document.getElementById('sync-dot').className = estado;
     document.getElementById('sync-text').textContent = texto;
@@ -266,9 +265,7 @@ function mostrarToast(msg, esError = false) {
     setTimeout(() => { t.style.display = 'none'; }, 2800);
 }
 
-// ============================================================
-// Modal de cambios
-// ============================================================
+
 function abrirModalCambios() {
     const lista = document.getElementById('lista-cambios');
     
@@ -299,7 +296,7 @@ document.getElementById('modal-cambios').addEventListener('click', function(e) {
     if (e.target === this) cerrarModalCambios();
 });
 
-// ============================================================
+
 async function cargarStatusSheet() {
     try {
         setSyncStatus('saving', 'Sincronizando...');
@@ -344,7 +341,7 @@ async function guardarStatusSheet(id, newStatus) {
         setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
         actualizarUltimaActualizacion();
         
-        // Agregar al log de cambios
+
         cambiosAplicados.unshift({ id: id, status: newStatus });
         if (cambiosAplicados.length > 50) cambiosAplicados.pop();
         
@@ -356,7 +353,7 @@ async function guardarStatusSheet(id, newStatus) {
     }
 }
 
-// ============================================================
+
 function crearIcono(status) {
     const cfg = STATUS_CONFIG[status];
     if (!cfg) return L.icon({ iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize:[25,41], iconAnchor:[12,41] });
@@ -563,7 +560,7 @@ function construirCapas(data) {
     layerControl = L.control.layers(baseLayers, overlays, { collapsed:false }).addTo(map);
 }
 
-// ============================================================
+
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
 
@@ -579,7 +576,7 @@ window.addEventListener('load', async function () {
 
         const ok = await cargarStatusSheet();
 
-        // Aplicar status y guardar lista de cambios
+
         cambiosAplicados = [];
         allData.forEach(item => {
             if (statusSheet[item.id]) {
