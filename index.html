@@ -4,381 +4,491 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hub Delivery MX - Mapa Interactivo</title>
-    
-    <!-- Leaflet CSS -->
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; }
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        
-        /* PANEL DE FILTROS - Inferior Izquierda */
-        .filter-panel {
-            position: absolute;
-            bottom: 30px;
-            left: 30px;
-            z-index: 1000;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            width: 280px;
-            border: 3px solid #1a5276; /* Borde destacado */
-        }
-        
-        .filter-panel h3 {
-            margin: 0 0 15px 0;
-            color: #1a5276;
-            font-size: 16px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-        
-        .filter-group { margin-bottom: 12px; }
-        .filter-group label {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        
-        .filter-group select {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #ddd; /* Borde destacado en inputs */
-            border-radius: 6px;
-            font-size: 13px;
-            background: #fff;
-        }
-        
-        .btn-apply {
-            width: 100%; 
-            padding: 10px; 
-            background: #1a5276; 
-            color: white; 
-            border: 2px solid #0d2a40; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .btn-apply:hover { background: #2c3e50; }
+        body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+        #map { height:100vh; width:100%; }
 
-        /* BOTONES DE STATUS EN POPUP */
-        .status-btn {
-            border: 2px solid transparent; /* Borde base */
-            padding: 6px 12px;
-            margin: 3px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: bold;
-            color: white;
-            transition: all 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .status-btn:hover { transform: translateY(-2px); opacity: 0.9; }
-        
-        /* Colores específicos con bordes más oscuros para destacar */
-        .btn-interesado { background-color: #FF007F; border-color: #cc0066; }
-        .btn-pickup { background-color: #00C853; border-color: #00963e; }
-        .btn-no { background-color: #9E9E9E; border-color: #757575; }
-        .btn-contactado { background-color: #3498db; border-color: #2980b9; } /* Azul preferido */
-        .btn-sinresp { background-color: #f39c12; border-color: #d35400; }
-
-        /* ANIMACIONES DE MARCADORES */
+        /* ── Marcadores animados (idénticos al original Python) ── */
         .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
         .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
         .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
-        .marker-radar-ring:nth-child(1){ animation-delay:0s; } .marker-radar-ring:nth-child(2){ animation-delay:0.6s; } .marker-radar-ring:nth-child(3){ animation-delay:1.2s; }
-        @keyframes radar-wave { 0% { transform:scale(0.3); opacity:1; border-color:#FF007F; } 70% { opacity:0.7; border-color:#FF6600; } 100%{ transform:scale(2.8); opacity:0; border-color:#FF007F; } }
+        .marker-radar-ring:nth-child(1){ animation-delay:0s; }
+        .marker-radar-ring:nth-child(2){ animation-delay:0.6s; }
+        .marker-radar-ring:nth-child(3){ animation-delay:1.2s; }
+        @keyframes radar-wave { 0%{ transform:scale(0.3); opacity:1; border-color:#FF007F; } 70%{ opacity:0.7; border-color:#FF6600; } 100%{ transform:scale(2.8); opacity:0; border-color:#FF007F; } }
 
         .marker-bounce-wrapper { display:flex; align-items:center; justify-content:center; animation:bounce-anim 0.8s ease-in-out infinite alternate; }
-        @keyframes bounce-anim { 0% { transform:translateY(0px); } 100%{ transform:translateY(-10px); } }
+        @keyframes bounce-anim { 0%{ transform:translateY(0px); } 100%{ transform:translateY(-10px); } }
         .marker-bounce-core { width:28px; height:28px; border-radius:70%; background:linear-gradient(135deg,#00C853,#00BCD4); border:3px solid white; box-shadow:0 0 10px rgba(0,200,83,0.8); display:flex; align-items:center; justify-content:center; font-size:14px; }
 
         .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
 
-        /* LOADING */
-        .loading {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 9999; background: white; padding: 30px; border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; border: 4px solid #1a5276;
+        /* ── Botones de status en popup (idénticos al original) ── */
+        .status-btn { border:none; padding:5px 10px; margin:2px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; transition:opacity 0.2s; }
+        .status-btn:hover { opacity:0.8; }
+        .btn-interesado  { background-color:#FF007F; }
+        .btn-pickup      { background-color:#00C853; }
+        .btn-no          { background-color:#9E9E9E; }
+        .btn-contactado  { background-color:#3498db; }
+        .btn-sinresp     { background-color:#f39c12; }
+
+        /* ── Panel de filtro lateral (igual al index.html anterior) ── */
+        .filter-panel {
+            position:absolute; bottom:30px; left:30px; z-index:1000;
+            background:white; padding:20px; border-radius:12px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.2); width:260px;
+            border:3px solid #1a5276;
         }
-        .spinner {
-            border: 5px solid #f3f3f3; border-top: 5px solid #1a5276; border-radius: 50%;
-            width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 15px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .filter-panel h3 { margin:0 0 14px 0; color:#1a5276; font-size:15px; border-bottom:2px solid #eee; padding-bottom:8px; }
+        .filter-group { margin-bottom:10px; }
+        .filter-group label { display:block; font-size:12px; margin-bottom:4px; font-weight:bold; color:#555; }
+        .filter-group select { width:100%; padding:7px; border:2px solid #ddd; border-radius:6px; font-size:13px; background:#fff; }
+        .btn-apply { width:100%; padding:10px; background:#1a5276; color:white; border:2px solid #0d2a40; border-radius:6px; cursor:pointer; font-weight:bold; transition:background 0.3s; }
+        .btn-apply:hover { background:#2c3e50; }
+
+        /* ── Toast de confirmación ── */
+        .toast { position:fixed; top:20px; right:20px; z-index:99999; background:#27ae60; color:white; padding:11px 18px; border-radius:8px; font-weight:bold; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:none; }
+
+        /* ── Badge de cambios pendientes ── */
+        .badge-cambios { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999; background:#e74c3c; color:white; padding:5px 15px; border-radius:20px; font-size:12px; font-weight:bold; display:none; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+
+        /* ── Loading ── */
+        .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
+        .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
+        @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p style="font-weight:bold; color:#1a5276;">Cargando Base de Datos...</p>
-    </div>
-    
-    <div id="map"></div>
-    
-    <!-- Panel de Filtros -->
-    <div class="filter-panel">
-        <h3><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
-        
-        <div class="filter-group">
-            <label>Municipio:</label>
-            <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
-        </div>
-        
-        <div class="filter-group">
-            <label>Código Postal:</label>
-            <select id="filtro-cp"><option value="">Todos los CP</option></select>
-        </div>
-        
-        <div class="filter-group">
-            <label>Status Actual:</label>
-            <select id="filtro-status">
-                <option value="">Todos los status</option>
-                <option value="INTERESADO">📡 INTERESADO</option>
-                <option value="PICK UP">🚀 PICK UP</option>
-                <option value="CONTACTADO">📞 CONTACTADO</option>
-                <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
-                <option value="NO INTERESADO">⛔ NO INTERESADO</option>
-            </select>
-        </div>
-        
-        <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
-    </div>
 
-    <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <script>
-        let map, markers = [], allData = [], cambiosStatus = {};
-        
-        const STATUS_CONFIG = {
-            "INTERESADO": { emoji: "📡", color: "#FF007F", tipo: "radar" },
-            "PICK UP": { emoji: "🚀", color: "#00C853", tipo: "bounce" },
-            "NO INTERESADO": { emoji: "⛔", color: "#9E9E9E", tipo: "opaco" },
-            "CONTACTADO": { emoji: "📞", color: "#3498db", tipo: "normal" },
-            "SIN RESPUESTA": { emoji: "💤", color: "#f39c12", tipo: "normal" }
-        };
-        
-        function initMap() {
-            map = L.map('map').setView([19.4326, -99.1332], 11);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CARTO', name: 'Claro'
-            }).addTo(map);
-            
-            L.control.layers({
-                'Claro': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'),
-                'Oscuro': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
-                'Satélite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
-            }).addTo(map);
-        }
-        
-        async function cargarDatos() {
-            try {
-                // Usa fetch relativo para que funcione en GitHub Pages
-                const response = await fetch('datos.json');
-                if (!response.ok) throw new Error("No se pudo cargar datos.json");
-                
-                const data = await response.json();
-                allData = data.datos;
-                
-                poblarFiltros();
-                crearMarcadores(allData);
-                document.getElementById('loading').style.display = 'none';
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al cargar datos.json. Asegúrate de que el archivo existe en el repositorio.');
-            }
-        }
-        
-        function poblarFiltros() {
-            const municipios = [...new Set(allData.map(d => d.municipio))].sort();
-            const codigosPostales = [...new Set(allData.map(d => d.cod_postal))].sort();
-            
-            const selectMun = document.getElementById('filtro-municipio');
-            const selectCP = document.getElementById('filtro-cp');
-            
-            municipios.forEach(mun => {
-                if (mun && mun !== 'No disponible') {
-                    const opt = document.createElement('option');
-                    opt.value = mun; opt.textContent = mun;
-                    selectMun.appendChild(opt);
-                }
-            });
-            
-            codigosPostales.forEach(cp => {
-                if (cp && cp !== 'No disponible') {
-                    const opt = document.createElement('option');
-                    opt.value = cp; opt.textContent = cp;
-                    selectCP.appendChild(opt);
-                }
-            });
-        }
-        
-        function crearIcono(status) {
-            const config = STATUS_CONFIG[status];
-            if (!config) return L.icon({
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                iconSize: [25, 41], iconAnchor: [12, 41]
-            });
-            
-            let html = '';
-            if (config.tipo === 'radar') {
-                html = `<div class="marker-radar-wrapper"><div class="marker-radar-ring"></div><div class="marker-radar-ring"></div><div class="marker-radar-ring"></div><div class="marker-radar-core">!</div></div>`;
-            } else if (config.tipo === 'bounce') {
-                html = `<div class="marker-bounce-wrapper"><div class="marker-bounce-core">🚀</div></div>`;
-            } else if (config.tipo === 'opaco') {
-                html = `<div class="marker-opaco-core">⛔</div>`;
-            } else {
-                return L.divIcon({
-                    className: '',
-                    html: `<div style="background:${config.color}; width:30px; height:30px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px ${config.color}; display:flex; align-items:center; justify-content:center; font-size:14px;">${config.emoji}</div>`,
-                    iconSize: [30, 30], iconAnchor: [15, 15]
-                });
-            }
-            
-            return L.divIcon({
-                className: '', html: html,
-                iconSize: config.tipo === 'radar' ? [44, 44] : [30, 30],
-                iconAnchor: config.tipo === 'radar' ? [22, 22] : [15, 15]
-            });
-        }
-        
-        function generarPopup(row) {
-            const config = STATUS_CONFIG[row.status];
-            const color = config ? config.color : '#ccc';
-            const emoji = config ? config.emoji : '';
-            
-            const waButton = row.whatsapp_link ? `
-                <div style="margin-top:12px; text-align:center;">
-                    <a href="${row.whatsapp_link}" target="_blank" style="text-decoration:none;">
-                        <div style="background:#25D366; color:white; padding:8px 15px; border-radius:20px; font-weight:bold; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 5px rgba(0,0,0,0.2); font-size:12px;">
-                            <i class="fab fa-whatsapp" style="font-size:16px;"></i> Contactar por WhatsApp
-                        </div>
-                    </a>
-                </div>` : '';
-            
-            const changeButtons = `
-                <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                    <p style="font-size:11px; color:#666; margin-bottom:5px;"><b>Cambiar Status:</b></p>
-                    <button class="status-btn btn-interesado" onclick="updateStatus('${row.id}', 'INTERESADO')">📡 INTERESADO</button>
-                    <button class="status-btn btn-pickup" onclick="updateStatus('${row.id}', 'PICK UP')">🚀 PICK UP</button>
-                    <button class="status-btn btn-contactado" onclick="updateStatus('${row.id}', 'CONTACTADO')">📞 CONTACTADO</button>
-                    <button class="status-btn btn-sinresp" onclick="updateStatus('${row.id}', 'SIN RESPUESTA')">💤 SIN RESPUESTA</button>
-                    <button class="status-btn btn-no" onclick="updateStatus('${row.id}', 'NO INTERESADO')">⛔ NO INTERESADO</button>
-                </div>`;
-            
-            return `
-                <div style="font-family:Arial,sans-serif; min-width:240px; font-size:13px; border-left:5px solid ${color}; padding-left:10px;">
-                    <div style="background:linear-gradient(135deg,${color},${color}dd); color:white; font-weight:bold; padding:5px 12px; border-radius:20px; display:inline-block; margin-bottom:8px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-                        ${emoji} ${row.status || 'SIN STATUS'}
-                    </div><br>
-                    <b style="font-size:15px; color:#1a5276;">${row.nom_estab}</b><br><br>
-                    <b>Razón Social:</b> ${row.raz_social}<br>
-                    <b>Dirección:</b> ${row.nom_vial} ${row.numero_ext}<br>
-                    <b>C.P.:</b> ${row.cod_postal} | <b>Mun:</b> ${row.municipio}<br>
-                    <b>Teléfono:</b> ${row.telefono}<br>
-                    ${waButton}
-                    ${changeButtons}
-                </div>`;
-        }
-        
-        function crearMarcadores(data) {
-            markers.forEach(m => map.removeLayer(m));
-            markers = [];
-            
-            data.forEach(row => {
-                if (!row.latitud || !row.longitud) return;
-                const marker = L.marker([row.latitud, row.longitud], { icon: crearIcono(row.status) });
-                marker.bindPopup(generarPopup(row));
-                marker.addTo(map);
-                markers.push(marker);
-            });
-        }
-        
-        window.updateStatus = function(id, newStatus) {
-            const dataIndex = allData.findIndex(d => d.id === id);
-            if (dataIndex !== -1) {
-                const oldStatus = allData[dataIndex].status;
-                
-                // Registrar cambio con auditoría completa
-                cambiosStatus[id] = {
-                    "status_anterior": oldStatus,
-                    "status_nuevo": newStatus,
-                    "contactado": newStatus === 'CONTACTADO' ? 'Si' : 'No',
-                    "sin_respuesta": newStatus === 'SIN RESPUESTA' ? 'Si' : 'No',
-                    "timestamp": new Date().toISOString()
-                };
-                
-                allData[dataIndex].status = newStatus;
-                
-                // Actualizar marcador visualmente
-                const marker = markers.find(m => m._popup._content.includes(id));
-                if (marker) {
-                    marker.setIcon(crearIcono(newStatus));
-                    marker.setPopupContent(generarPopup(allData[dataIndex]));
-                    
-                    // Efecto visual de sombra azul al cambiar
-                    marker.getElement().style.filter = "drop-shadow(0 0 10px #3498db)";
-                    setTimeout(() => { if(marker.getElement()) marker.getElement().style.filter = ""; }, 1500);
-                }
-            }
-        };
-        
-        function aplicarFiltros() {
-            const municipio = document.getElementById('filtro-municipio').value;
-            const cp = document.getElementById('filtro-cp').value;
-            const status = document.getElementById('filtro-status').value;
-            
-            let filtered = allData;
-            if (municipio) filtered = filtered.filter(d => d.municipio === municipio);
-            if (cp) filtered = filtered.filter(d => d.cod_postal === cp);
-            if (status) filtered = filtered.filter(d => d.status === status);
-            
-            crearMarcadores(filtered);
-        }
-        
-        function descargarCambios() {
-            if (Object.keys(cambiosStatus).length === 0) {
-                alert('No has realizado ningún cambio de status.');
-                return;
-            }
-            
-            const jsonStr = JSON.stringify(cambiosStatus, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `cambios_status_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-        
-        window.addEventListener('load', function() {
-            initMap();
-            cargarDatos();
-            
-            setTimeout(function() {
-                const container = document.querySelector('.leaflet-container');
-                if (container) {
-                    const downloadBtn = document.createElement('button');
-                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar Cambios JSON';
-                    downloadBtn.style.cssText = 'position:absolute; bottom:30px; right:30px; z-index:9999; background:#1a5276; color:white; padding:12px 20px; border:3px solid #FFD700; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3); font-size:14px;';
-                    downloadBtn.onclick = descargarCambios;
-                    container.appendChild(downloadBtn);
-                }
-            }, 1000);
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p style="font-weight:bold;color:#1a5276;">Cargando Base de Datos...</p>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="badge-cambios" class="badge-cambios">⚠️ <span id="num-cambios">0</span> cambios sin exportar</div>
+
+<div id="map"></div>
+
+<!-- Panel de filtros -->
+<div class="filter-panel">
+    <h3>🔍 Filtros de Búsqueda</h3>
+    <div class="filter-group">
+        <label>Municipio:</label>
+        <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Código Postal:</label>
+        <select id="filtro-cp"><option value="">Todos los CP</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Status:</label>
+        <select id="filtro-status">
+            <option value="">Todos los status</option>
+            <option value="INTERESADO">📡 INTERESADO</option>
+            <option value="PICK UP">🚀 PICK UP</option>
+            <option value="CONTACTADO">📞 CONTACTADO</option>
+            <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
+            <option value="NO INTERESADO">⛔ NO INTERESADO</option>
+            <option value="NO DISPONIBLE">🔒 NO DISPONIBLE</option>
+        </select>
+    </div>
+    <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+
+<script>
+// ============================================================
+// CONFIG (idéntico al original Python)
+// ============================================================
+const STATUS_CONFIG = {
+    "INTERESADO":    { emoji:"📡", color:"#FF007F", grad:"linear-gradient(135deg,#FF007F,#FF6600)", tipo:"radar"  },
+    "PICK UP":       { emoji:"🚀", color:"#00C853", grad:"linear-gradient(135deg,#00C853,#00BCD4)", tipo:"bounce" },
+    "NO INTERESADO": { emoji:"⛔", color:"#9E9E9E", grad:"linear-gradient(135deg,#9E9E9E,#607D8B)", tipo:"opaco"  },
+    "CONTACTADO":    { emoji:"📞", color:"#3498db", grad:"linear-gradient(135deg,#3498db,#2980b9)", tipo:"normal" },
+    "SIN RESPUESTA": { emoji:"💤", color:"#f39c12", grad:"linear-gradient(135deg,#f39c12,#d35400)", tipo:"normal" },
+    "NO DISPONIBLE": { emoji:"🔒", color:"#607D8B", grad:"linear-gradient(135deg,#607D8B,#455A64)", tipo:"normal" }
+};
+
+const COLORES_CP  = ['blue','green','red','orange','purple','darkblue','cadetblue','darkgreen','pink','gray'];
+const COLORES_MUN = ['darkred','darkgreen','darkblue','purple','orange','red','green','blue','gray','black'];
+
+// LS_KEY para localStorage
+const LS_KEY = 'hubdelivery_cambios_status';
+
+// ============================================================
+// Estado global
+// ============================================================
+let map, allData = [], CHANGES = {}, activeLayer = null;
+let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null;
+let layerControl = null;
+
+// ============================================================
+// localStorage — igual que la versión anterior
+// ============================================================
+function cargarCambiosGuardados() {
+    try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (raw) { CHANGES = JSON.parse(raw); }
+    } catch(e) { CHANGES = {}; }
+}
+function guardarCambiosLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(CHANGES)); } catch(e) {}
+    actualizarBadge();
+}
+function actualizarBadge() {
+    const n = Object.keys(CHANGES).length;
+    document.getElementById('num-cambios').textContent = n;
+    document.getElementById('badge-cambios').style.display = n > 0 ? 'block' : 'none';
+}
+function mostrarToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+// ============================================================
+// Crear icono (lógica idéntica al original Python / crear_marker)
+// ============================================================
+function crearIcono(status) {
+    const cfg = STATUS_CONFIG[status];
+    if (!cfg) {
+        return L.icon({ iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize:[25,41], iconAnchor:[12,41] });
+    }
+    if (cfg.tipo === 'radar') {
+        return L.divIcon({
+            className:'',
+            html:"<div class='marker-radar-wrapper'><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-core'>!</div></div>",
+            iconSize:[44,44], iconAnchor:[22,22]
         });
-    </script>
+    }
+    if (cfg.tipo === 'bounce') {
+        return L.divIcon({
+            className:'',
+            html:"<div class='marker-bounce-wrapper'><div class='marker-bounce-core'>🚀</div></div>",
+            iconSize:[34,34], iconAnchor:[17,17]
+        });
+    }
+    if (cfg.tipo === 'opaco') {
+        return L.divIcon({
+            className:'',
+            html:"<div class='marker-opaco-core'>⛔</div>",
+            iconSize:[22,22], iconAnchor:[11,11]
+        });
+    }
+    // normal (CONTACTADO, SIN RESPUESTA, NO DISPONIBLE)
+    return L.divIcon({
+        className:'',
+        html:`<div style="background:${cfg.color};width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 0 8px ${cfg.color};display:flex;align-items:center;justify-content:center;font-size:14px;">${cfg.emoji}</div>`,
+        iconSize:[30,30], iconAnchor:[15,15]
+    });
+}
+
+// ============================================================
+// Popup — idéntico a build_popup del original Python
+// ============================================================
+function buildPopup(row) {
+    const id      = row.id;
+    const status  = row.status || 'SIN STATUS';
+    const cfg     = STATUS_CONFIG[status] || {};
+    const emoji   = cfg.emoji   || '';
+    const grad    = cfg.grad    || '#ccc';
+    const color   = cfg.color   || '#333';
+    const borde   = cfg.color   ? `border-left:5px solid ${cfg.color};` : '';
+
+    const badge = cfg.emoji
+        ? `<div style="background:${grad};color:white;font-weight:bold;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${emoji} ${status}</div><br>`
+        : '';
+
+    const waButton = row.whatsapp_link
+        ? `<div style="margin-top:12px;text-align:center;">
+               <a href="${row.whatsapp_link}" target="_blank" style="text-decoration:none;">
+                   <div style="background:#25D366;color:white;padding:8px 15px;border-radius:20px;font-weight:bold;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 5px rgba(0,0,0,0.2);font-size:12px;">
+                       <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                       Contactar por WhatsApp
+                   </div>
+               </a>
+           </div>`
+        : '';
+
+    const changeButtons = `
+        <div style="margin-top:15px;border-top:1px solid #eee;padding-top:10px;">
+            <p style="font-size:11px;color:#666;margin-bottom:5px;"><b>Cambiar Status:</b></p>
+            <button class="status-btn btn-interesado"  onclick="updateStatus('${id}','INTERESADO')">📡 INTERESADO</button>
+            <button class="status-btn btn-pickup"      onclick="updateStatus('${id}','PICK UP')">🚀 PICK UP</button>
+            <button class="status-btn btn-contactado"  onclick="updateStatus('${id}','CONTACTADO')">📞 CONTACTADO</button>
+            <button class="status-btn btn-sinresp"     onclick="updateStatus('${id}','SIN RESPUESTA')">💤 SIN RESPUESTA</button>
+            <button class="status-btn btn-no"          onclick="updateStatus('${id}','NO INTERESADO')">⛔ NO INTERESADO</button>
+        </div>`;
+
+    return `
+        <div id="popup-${id}" style="font-family:Arial,sans-serif;min-width:240px;font-size:13px;${borde}padding-left:10px;">
+            ${badge}
+            <b style="font-size:15px;color:#1a5276;">${row.nom_estab}</b><br><br>
+            <b>Razón Social:</b> ${row.raz_social}<br>
+            <b>Calle:</b> ${row.nom_vial}<br>
+            <b>Número:</b> ${row.numero_ext}<br>
+            <b>C.P.:</b> ${row.cod_postal}<br>
+            <b>Municipio:</b> ${row.municipio}<br>
+            <b>Teléfono:</b> ${row.telefono}<br>
+            <b>Status Actual:</b> <span id="status-text-${id}" style="color:${color};font-weight:bold;">${status}</span>
+            ${waButton}
+            ${changeButtons}
+        </div>`;
+}
+
+// ============================================================
+// updateStatus — idéntico al JS original + localStorage
+// ============================================================
+window.updateStatus = function(id, newStatus) {
+    // Actualizar texto del popup (igual que el original)
+    const statusTextElem = document.getElementById('status-text-' + id);
+    const oldStatus = statusTextElem ? statusTextElem.innerText.trim() : 'DESCONOCIDO';
+
+    if (statusTextElem) {
+        statusTextElem.innerText = newStatus;
+        const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12' };
+        statusTextElem.style.color = colors[newStatus] || '#333';
+    }
+
+    // Registrar cambio (campo "nuevo" igual al original Python)
+    CHANGES[id] = { "anterior": oldStatus, "nuevo": newStatus };
+
+    // ++ NUEVO: persistir en localStorage
+    guardarCambiosLocal();
+
+    // Actualizar datos en memoria
+    const dataIdx = allData.findIndex(d => d.id === id);
+    if (dataIdx !== -1) allData[dataIdx].status = newStatus;
+
+    console.log(`Cambio registrado: ID ${id} de ${oldStatus} a ${newStatus}`);
+    mostrarToast(`✅ ${newStatus} — guardado localmente`);
+};
+
+// ============================================================
+// Crear marcador y añadir a un cluster
+// ============================================================
+function crearMarker(row, cluster) {
+    const cfg     = STATUS_CONFIG[row.status] || {};
+    const tooltip = cfg.emoji ? `${cfg.emoji} ${row.status} — ${row.nom_estab}` : row.nom_estab;
+    const marker  = L.marker([row.latitud, row.longitud], { icon: crearIcono(row.status) });
+    marker.bindPopup(buildPopup(row), { maxWidth: 340 });
+    marker.bindTooltip(tooltip);
+    cluster.addLayer(marker);
+    return marker;
+}
+
+// ============================================================
+// Función para ícono de cluster coloreado (igual al original)
+// ============================================================
+function clusterIconFn(color) {
+    return `function(cluster){return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});}`;
+}
+
+// ============================================================
+// Construir todas las capas (CP / Municipio / Status / Heatmap)
+// ============================================================
+function construirCapas(data) {
+    // Limpiar capas anteriores
+    Object.values(cpLayers).forEach(l => map.removeLayer(l));
+    Object.values(munLayers).forEach(l => map.removeLayer(l));
+    Object.values(statusLayers).forEach(l => map.removeLayer(l));
+    if (heatLayer) map.removeLayer(heatLayer);
+    if (layerControl) layerControl.remove();
+    cpLayers = {}; munLayers = {}; statusLayers = {};
+
+    // Agrupar datos
+    const byCP  = {}, byMun = {}, bySt = {};
+    data.forEach(row => {
+        (byCP[row.cod_postal]  = byCP[row.cod_postal]  || []).push(row);
+        (byMun[row.municipio]  = byMun[row.municipio]  || []).push(row);
+        (bySt[row.status]      = bySt[row.status]      || []).push(row);
+    });
+
+    const overlays = {};
+
+    // ── Capas por CP ──
+    const cps = Object.keys(byCP).sort();
+    cps.forEach((cp, i) => {
+        const color   = COLORES_CP[i % COLORES_CP.length];
+        const cluster = L.markerClusterGroup({ show:false, iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        byCP[cp].forEach(row => crearMarker(row, cluster));
+        cpLayers[cp] = cluster;
+        overlays[`CP_${cp}`] = cluster;
+    });
+
+    // ── Capas por Municipio ──
+    const muns = Object.keys(byMun).sort();
+    muns.forEach((mun, i) => {
+        const color   = COLORES_MUN[i % COLORES_MUN.length];
+        const cluster = L.markerClusterGroup({ show:false, iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        byMun[mun].forEach(row => crearMarker(row, cluster));
+        munLayers[mun] = cluster;
+        overlays[`MUN_${mun}`] = cluster;
+    });
+
+    // ── Capas por Status ──
+    const sts = Object.keys(bySt).sort();
+    sts.forEach(st => {
+        const color   = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
+        const cluster = L.markerClusterGroup({ show:false, iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        bySt[st].forEach(row => crearMarker(row, cluster));
+        statusLayers[st] = cluster;
+        overlays[`ST_${st}`] = cluster;
+    });
+
+    // ── Heatmap (pesos idénticos al original) ──
+    const heatData = data.map(row => {
+        let peso = 1;
+        if (row.status === 'INTERESADO')  peso = 3;
+        else if (row.status === 'PICK UP') peso = 2;
+        else if (row.status === 'CONTACTADO') peso = 1.5;
+        return [row.latitud, row.longitud, peso];
+    });
+    heatLayer = L.heatLayer(heatData, {
+        minOpacity:0.3, maxZoom:18, radius:15, blur:10,
+        gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'}
+    });
+    overlays['Zona de Calor'] = heatLayer;
+
+    // ── Control de capas ──
+    const baseLayers = {
+        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',   { attribution:'&copy; CARTO' }),
+        'CartoDB Voyager':  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }),
+        'CartoDB Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',    { attribution:'&copy; CARTO' }),
+        'Satélite Esri':    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri' })
+    };
+    layerControl = L.control.layers(baseLayers, overlays, { collapsed:false }).addTo(map);
+}
+
+// ============================================================
+// Poblar selects del panel de filtro
+// ============================================================
+function poblarFiltros(data) {
+    const muns = [...new Set(data.map(d => d.municipio))].sort();
+    const cps  = [...new Set(data.map(d => d.cod_postal))].sort();
+
+    const selMun = document.getElementById('filtro-municipio');
+    const selCP  = document.getElementById('filtro-cp');
+
+    selMun.innerHTML = '<option value="">Todos los municipios</option>';
+    selCP.innerHTML  = '<option value="">Todos los CP</option>';
+
+    muns.forEach(m => { if (m && m !== 'No disponible') { const o=document.createElement('option'); o.value=m; o.textContent=m; selMun.appendChild(o); } });
+    cps.forEach(c  => { if (c && c !== 'No disponible') { const o=document.createElement('option'); o.value=c; o.textContent=c; selCP.appendChild(o); } });
+}
+
+// ============================================================
+// Aplicar filtros (igual al original)
+// ============================================================
+function aplicarFiltros() {
+    const municipio = document.getElementById('filtro-municipio').value;
+    const cp        = document.getElementById('filtro-cp').value;
+    const status    = document.getElementById('filtro-status').value;
+
+    let filtered = allData;
+    if (municipio) filtered = filtered.filter(d => d.municipio  === municipio);
+    if (cp)        filtered = filtered.filter(d => d.cod_postal  === cp);
+    if (status)    filtered = filtered.filter(d => d.status      === status);
+
+    construirCapas(filtered);
+}
+
+// ============================================================
+// Descargar cambios (idéntico al original Python JS)
+// ============================================================
+function descargarCambios() {
+    if (Object.keys(CHANGES).length === 0) {
+        alert('No has realizado ningún cambio de status.');
+        return;
+    }
+    const jsonStr = JSON.stringify(CHANGES, null, 2);
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
+    const a = document.createElement('a');
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", "cambios_status.json");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    mostrarToast('📥 Archivo descargado. Ahora corre generar_json.py');
+}
+
+function limpiarCambiosGuardados() {
+    if (!confirm(`¿Limpiar los ${Object.keys(CHANGES).length} cambios guardados?\nHaz esto solo DESPUÉS de haber corrido generar_json.py y subido el nuevo datos.json.`)) return;
+    CHANGES = {};
+    localStorage.removeItem(LS_KEY);
+    actualizarBadge();
+    mostrarToast('🗑️ Cambios locales limpiados');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('load', async function () {
+    // Recuperar cambios de localStorage antes de cargar datos
+    cargarCambiosGuardados();
+
+    // Mapa
+    map = L.map('map', { zoomControl:true }).setView([19.4326, -99.1332], 11);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }).addTo(map);
+
+    // Cargar datos
+    try {
+        const resp = await fetch('datos.json');
+        if (!resp.ok) throw new Error('No se pudo cargar datos.json');
+        const data = await resp.json();
+        allData = data.datos;
+
+        // Aplicar cambios guardados en localStorage sobre los datos
+        let aplicados = 0;
+        allData.forEach(item => {
+            if (CHANGES[item.id]) {
+                item.status = CHANGES[item.id].nuevo;
+                aplicados++;
+            }
+        });
+        if (aplicados > 0) console.log(`✅ ${aplicados} status restaurados desde localStorage`);
+
+        poblarFiltros(allData);
+        construirCapas(allData);
+        actualizarBadge();
+        document.getElementById('loading').style.display = 'none';
+
+    } catch(err) {
+        console.error(err);
+        alert('Error al cargar datos.json. Verifica que el archivo existe en el repositorio.');
+    }
+
+    // Botones flotantes (posición igual al original: bottom-left y abajo)
+    setTimeout(function() {
+        const container = document.querySelector('.leaflet-container');
+        if (!container) return;
+
+        // Botón descargar (idéntico al original)
+        const dlBtn = document.createElement('button');
+        dlBtn.innerHTML = '💾 Descargar Cambios';
+        dlBtn.style.cssText = 'position:absolute;bottom:20px;left:20px;z-index:9999;background:#1a5276;color:white;padding:10px 20px;border:3px solid #FFD700;border-radius:5px;cursor:pointer;font-weight:bold;box-shadow:0 2px 5px rgba(0,0,0,0.3);';
+        dlBtn.onclick = descargarCambios;
+        container.appendChild(dlBtn);
+
+        // Botón limpiar localStorage (nuevo, sobre el de descargar)
+        const clrBtn = document.createElement('button');
+        clrBtn.innerHTML = '🗑️ Limpiar Cambios';
+        clrBtn.title = 'Solo después de subir el nuevo datos.json';
+        clrBtn.style.cssText = 'position:absolute;bottom:70px;left:20px;z-index:9999;background:#7f8c8d;color:white;padding:7px 14px;border:2px solid #555;border-radius:5px;cursor:pointer;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
+        clrBtn.onclick = limpiarCambiosGuardados;
+        container.appendChild(clrBtn);
+    }, 1000);
+});
+</script>
 </body>
 </html>
