@@ -87,6 +87,32 @@
 
 <div id="map"></div>
 
+<!-- Panel de filtros -->
+<div class="filter-panel">
+    <h3>🔍 Filtros de Búsqueda</h3>
+    <div class="filter-group">
+        <label>Municipio:</label>
+        <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Código Postal:</label>
+        <select id="filtro-cp"><option value="">Todos los CP</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Status:</label>
+        <select id="filtro-status">
+            <option value="">Todos los status</option>
+            <option value="INTERESADO">📡 INTERESADO</option>
+            <option value="PICK UP">🚀 PICK UP</option>
+            <option value="CONTACTADO">📞 CONTACTADO</option>
+            <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
+            <option value="NO INTERESADO">⛔ NO INTERESADO</option>
+            <option value="NO DISPONIBLE">🔒 NO DISPONIBLE</option>
+        </select>
+    </div>
+    <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
