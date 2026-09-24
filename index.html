@@ -4,28 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hub Delivery MX - Mapa Interactivo</title>
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
-
     <style>
         body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
         #map { height:100vh; width:100%; }
-
         /* ── Marcadores animados ── */
         .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
         .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
         .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
         .marker-radar-ring:nth-child(1){ animation-delay:0s; } .marker-radar-ring:nth-child(2){ animation-delay:0.6s; } .marker-radar-ring:nth-child(3){ animation-delay:1.2s; }
         @keyframes radar-wave { 0%{ transform:scale(0.3); opacity:1; border-color:#FF007F; } 70%{ opacity:0.7; border-color:#FF6600; } 100%{ transform:scale(2.8); opacity:0; border-color:#FF007F; } }
-
         .marker-bounce-wrapper { display:flex; align-items:center; justify-content:center; animation:bounce-anim 0.8s ease-in-out infinite alternate; }
         @keyframes bounce-anim { 0%{ transform:translateY(0px); } 100%{ transform:translateY(-10px); } }
         .marker-bounce-core { width:28px; height:28px; border-radius:70%; background:linear-gradient(135deg,#00C853,#00BCD4); border:3px solid white; box-shadow:0 0 10px rgba(0,200,83,0.8); display:flex; align-items:center; justify-content:center; font-size:14px; }
-
         .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
-
         /* ── Botones de status ── */
         .status-btn { border:none; padding:5px 10px; margin:2px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; transition:opacity 0.2s; }
         .status-btn:hover { opacity:0.8; }
@@ -35,16 +29,6 @@
         .btn-no          { background-color:#9E9E9E; }
         .btn-contactado  { background-color:#3498db; }
         .btn-sinresp     { background-color:#f39c12; }
-
-        /* ── Panel filtros ── */
-        .filter-panel { position:absolute; bottom:30px; left:30px; z-index:1000; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); width:260px; border:3px solid #1a5276; }
-        .filter-panel h3 { margin:0 0 14px 0; color:#1a5276; font-size:15px; border-bottom:2px solid #eee; padding-bottom:8px; }
-        .filter-group { margin-bottom:10px; }
-        .filter-group label { display:block; font-size:12px; margin-bottom:4px; font-weight:bold; color:#555; }
-        .filter-group select { width:100%; padding:7px; border:2px solid #ddd; border-radius:6px; font-size:13px; background:#fff; }
-        .btn-apply { width:100%; padding:10px; background:#1a5276; color:white; border:2px solid #0d2a40; border-radius:6px; cursor:pointer; font-weight:bold; transition:background 0.3s; }
-        .btn-apply:hover { background:#2c3e50; }
-
         /* ── Indicador de sync ── */
         #sync-status {
             position:fixed; top:15px; right:15px; z-index:9999;
@@ -59,11 +43,9 @@
         #sync-dot.saving  { background:#f39c12; animation:pulse 0.8s infinite; }
         #sync-dot.error   { background:#e74c3c; }
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
-
         /* ── Toast ── */
         .toast { position:fixed; top:60px; right:15px; z-index:99999; background:#27ae60; color:white; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:none; }
         .toast.error { background:#e74c3c; }
-
         /* ── Loading ── */
         .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
         .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
@@ -71,52 +53,21 @@
     </style>
 </head>
 <body>
-
 <div id="loading" class="loading">
     <div class="spinner"></div>
     <p style="font-weight:bold;color:#1a5276;">Cargando Base de Datos...</p>
 </div>
-
 <!-- Indicador de sincronización -->
 <div id="sync-status">
     <div id="sync-dot"></div>
     <span id="sync-text">Conectando...</span>
 </div>
-
 <div id="toast" class="toast"></div>
-
 <div id="map"></div>
-
-<!-- Panel de filtros -->
-<div class="filter-panel">
-    <h3>🔍 Filtros de Búsqueda</h3>
-    <div class="filter-group">
-        <label>Municipio:</label>
-        <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
-    </div>
-    <div class="filter-group">
-        <label>Código Postal:</label>
-        <select id="filtro-cp"><option value="">Todos los CP</option></select>
-    </div>
-    <div class="filter-group">
-        <label>Status:</label>
-        <select id="filtro-status">
-            <option value="">Todos los status</option>
-            <option value="INTERESADO">📡 INTERESADO</option>
-            <option value="PICK UP">🚀 PICK UP</option>
-            <option value="CONTACTADO">📞 CONTACTADO</option>
-            <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
-            <option value="NO INTERESADO">⛔ NO INTERESADO</option>
-            <option value="NO DISPONIBLE">🔒 NO DISPONIBLE</option>
-        </select>
-    </div>
-    <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
-
 <script>
 // ============================================================
 // ⚠️  REEMPLAZA ESTA URL con la de tu Web App de Apps Script
@@ -133,26 +84,22 @@ const STATUS_CONFIG = {
     "SIN RESPUESTA": { emoji:"💤", color:"#f39c12", grad:"linear-gradient(135deg,#f39c12,#d35400)", tipo:"normal" },
     "NO DISPONIBLE": { emoji:"🔒", color:"#607D8B", grad:"linear-gradient(135deg,#607D8B,#455A64)", tipo:"normal" }
 };
-
 const COLORES_CP  = ['blue','green','red','orange','purple','darkblue','cadetblue','darkgreen','pink','gray'];
 const COLORES_MUN = ['darkred','darkgreen','darkblue','purple','orange','red','green','blue','gray','black'];
-
 // ============================================================
 // Estado global
 // ============================================================
 let map, allData = [], statusSheet = {};
 let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null, layerControl = null;
-
 // ============================================================
 // UI helpers
 // ============================================================
 function setSyncStatus(estado, texto) {
     const dot  = document.getElementById('sync-dot');
     const txt  = document.getElementById('sync-text');
-    dot.className = estado;   // 'ok' | 'saving' | 'error' | ''
+    dot.className = estado;
     txt.textContent = texto;
 }
-
 function mostrarToast(msg, esError = false) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -160,7 +107,6 @@ function mostrarToast(msg, esError = false) {
     t.style.display = 'block';
     setTimeout(() => { t.style.display = 'none'; }, 2800);
 }
-
 // ============================================================
 // Leer status desde Google Sheets (GET)
 // ============================================================
@@ -170,7 +116,7 @@ async function cargarStatusSheet() {
         const resp = await fetch(APPS_SCRIPT_URL);
         const json = await resp.json();
         if (json.ok) {
-            statusSheet = json.data;  // { "id123": "INTERESADO", ... }
+            statusSheet = json.data;
             setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
             return true;
         } else {
@@ -182,7 +128,6 @@ async function cargarStatusSheet() {
         return false;
     }
 }
-
 // ============================================================
 // Escribir status a Google Sheets (POST)
 // ============================================================
@@ -203,23 +148,19 @@ async function guardarStatusSheet(id, newStatus) {
         return false;
     }
 }
-
 // ============================================================
-// Crear icono (idéntico al original)
+// Crear icono
 // ============================================================
 function crearIcono(status) {
     const cfg = STATUS_CONFIG[status];
     if (!cfg) return L.icon({ iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize:[25,41], iconAnchor:[12,41] });
-
     if (cfg.tipo === 'radar') return L.divIcon({ className:'', html:"<div class='marker-radar-wrapper'><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-core'>!</div></div>", iconSize:[44,44], iconAnchor:[22,22] });
     if (cfg.tipo === 'bounce') return L.divIcon({ className:'', html:"<div class='marker-bounce-wrapper'><div class='marker-bounce-core'>🚀</div></div>", iconSize:[34,34], iconAnchor:[17,17] });
     if (cfg.tipo === 'opaco')  return L.divIcon({ className:'', html:"<div class='marker-opaco-core'>⛔</div>", iconSize:[22,22], iconAnchor:[11,11] });
-
     return L.divIcon({ className:'', html:`<div style="background:${cfg.color};width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 0 8px ${cfg.color};display:flex;align-items:center;justify-content:center;font-size:14px;">${cfg.emoji}</div>`, iconSize:[30,30], iconAnchor:[15,15] });
 }
-
 // ============================================================
-// Popup (idéntico al original Python build_popup)
+// Popup
 // ============================================================
 function buildPopup(row) {
     const id     = row.id;
@@ -229,15 +170,12 @@ function buildPopup(row) {
     const grad   = cfg.grad   || '#ccc';
     const color  = cfg.color  || '#333';
     const borde  = cfg.color  ? `border-left:5px solid ${cfg.color};` : '';
-
     const badge = cfg.emoji
         ? `<div style="background:${grad};color:white;font-weight:bold;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${emoji} ${status}</div><br>`
         : '';
-
     const waButton = row.whatsapp_link
         ? `<div style="margin-top:12px;text-align:center;"><a href="${row.whatsapp_link}" target="_blank" style="text-decoration:none;"><div style="background:#25D366;color:white;padding:8px 15px;border-radius:20px;font-weight:bold;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 5px rgba(0,0,0,0.2);font-size:12px;"><svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>Contactar por WhatsApp</div></a></div>`
         : '';
-
     const changeButtons = `
         <div style="margin-top:15px;border-top:1px solid #eee;padding-top:10px;">
             <p style="font-size:11px;color:#666;margin-bottom:5px;"><b>Cambiar Status:</b></p>
@@ -247,7 +185,6 @@ function buildPopup(row) {
             <button class="status-btn btn-sinresp"     onclick="updateStatus('${id}','SIN RESPUESTA')">💤 SIN RESPUESTA</button>
             <button class="status-btn btn-no"          onclick="updateStatus('${id}','NO INTERESADO')">⛔ NO INTERESADO</button>
         </div>`;
-
     return `
         <div id="popup-${id}" style="font-family:Arial,sans-serif;min-width:240px;font-size:13px;${borde}padding-left:10px;">
             ${badge}
@@ -263,18 +200,14 @@ function buildPopup(row) {
             ${changeButtons}
         </div>`;
 }
-
 // ============================================================
-// updateStatus — guarda en Sheets + actualiza popup
+// updateStatus
 // ============================================================
 window.updateStatus = async function(id, newStatus) {
-    // Deshabilitar botones del popup mientras guarda
     const popup = document.getElementById(`popup-${id}`);
     const btns  = popup ? popup.querySelectorAll('.status-btn') : [];
     btns.forEach(b => b.disabled = true);
     setSyncStatus('saving', 'Guardando...');
-
-    // Actualizar UI de inmediato (optimistic update)
     const statusTextElem = document.getElementById('status-text-' + id);
     const oldStatus = statusTextElem ? statusTextElem.innerText.trim() : 'DESCONOCIDO';
     if (statusTextElem) {
@@ -282,26 +215,18 @@ window.updateStatus = async function(id, newStatus) {
         const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12' };
         statusTextElem.style.color = colors[newStatus] || '#333';
     }
-
-    // Actualizar datos en memoria
     const dataIdx = allData.findIndex(d => d.id === id);
     if (dataIdx !== -1) allData[dataIdx].status = newStatus;
-
-    // Guardar en Google Sheets
     const ok = await guardarStatusSheet(id, newStatus);
-
     btns.forEach(b => b.disabled = false);
-
     if (ok) {
         mostrarToast(`✅ ${newStatus} guardado en Sheets`);
     } else {
-        // Revertir UI si falló
         if (statusTextElem) statusTextElem.innerText = oldStatus;
         if (dataIdx !== -1) allData[dataIdx].status = oldStatus;
         mostrarToast('❌ Error al guardar. Intenta de nuevo.', true);
     }
 };
-
 // ============================================================
 // Crear marcador
 // ============================================================
@@ -314,7 +239,6 @@ function crearMarker(row, cluster) {
     cluster.addLayer(marker);
     return marker;
 }
-
 // ============================================================
 // Construir capas (CP / Municipio / Status / Heatmap)
 // ============================================================
@@ -325,16 +249,13 @@ function construirCapas(data) {
     if (heatLayer) map.removeLayer(heatLayer);
     if (layerControl) layerControl.remove();
     cpLayers = {}; munLayers = {}; statusLayers = {};
-
     const byCP = {}, byMun = {}, bySt = {};
     data.forEach(row => {
         (byCP[row.cod_postal] = byCP[row.cod_postal] || []).push(row);
         (byMun[row.municipio] = byMun[row.municipio] || []).push(row);
         (bySt[row.status]     = bySt[row.status]     || []).push(row);
     });
-
     const overlays = {};
-
     // Capas CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
@@ -343,7 +264,6 @@ function construirCapas(data) {
         cpLayers[cp] = cl;
         overlays[`CP_${cp}`] = cl;
     });
-
     // Capas Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
@@ -352,7 +272,6 @@ function construirCapas(data) {
         munLayers[mun] = cl;
         overlays[`MUN_${mun}`] = cl;
     });
-
     // Capas Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
@@ -361,7 +280,6 @@ function construirCapas(data) {
         statusLayers[st] = cl;
         overlays[`ST_${st}`] = cl;
     });
-
     // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
@@ -372,7 +290,6 @@ function construirCapas(data) {
     });
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
-
     const baseLayers = {
         'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',   { attribution:'&copy; CARTO' }),
         'CartoDB Voyager':  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }),
@@ -381,50 +298,18 @@ function construirCapas(data) {
     };
     layerControl = L.control.layers(baseLayers, overlays, { collapsed:false }).addTo(map);
 }
-
-// ============================================================
-// Filtros
-// ============================================================
-function poblarFiltros(data) {
-    const muns = [...new Set(data.map(d => d.municipio))].sort();
-    const cps  = [...new Set(data.map(d => d.cod_postal))].sort();
-    const selMun = document.getElementById('filtro-municipio');
-    const selCP  = document.getElementById('filtro-cp');
-    selMun.innerHTML = '<option value="">Todos los municipios</option>';
-    selCP.innerHTML  = '<option value="">Todos los CP</option>';
-    muns.forEach(m => { if (m && m !== 'No disponible') { const o=document.createElement('option'); o.value=m; o.textContent=m; selMun.appendChild(o); } });
-    cps.forEach(c  => { if (c && c !== 'No disponible') { const o=document.createElement('option'); o.value=c; o.textContent=c; selCP.appendChild(o);  } });
-}
-
-function aplicarFiltros() {
-    const municipio = document.getElementById('filtro-municipio').value;
-    const cp        = document.getElementById('filtro-cp').value;
-    const status    = document.getElementById('filtro-status').value;
-    let filtered = allData;
-    if (municipio) filtered = filtered.filter(d => d.municipio  === municipio);
-    if (cp)        filtered = filtered.filter(d => d.cod_postal  === cp);
-    if (status)    filtered = filtered.filter(d => d.status      === status);
-    construirCapas(filtered);
-}
-
 // ============================================================
 // INIT
 // ============================================================
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }).addTo(map);
-
     try {
-        // 1. Cargar datos del mapa (GitHub Pages)
         const resp = await fetch('datos.json');
         if (!resp.ok) throw new Error('No se pudo cargar datos.json');
         const data = await resp.json();
         allData = data.datos;
-
-        // 2. Cargar status actualizados desde Google Sheets
         await cargarStatusSheet();
-
-        // 3. Aplicar status de Sheets sobre los datos
         let aplicados = 0;
         allData.forEach(item => {
             if (statusSheet[item.id]) {
@@ -433,11 +318,8 @@ window.addEventListener('load', async function () {
             }
         });
         if (aplicados > 0) console.log(`✅ ${aplicados} status cargados desde Sheets`);
-
-        poblarFiltros(allData);
-        
+        construirCapas(allData);
         document.getElementById('loading').style.display = 'none';
-
     } catch(err) {
         console.error(err);
         setSyncStatus('error', 'Error al cargar datos');
