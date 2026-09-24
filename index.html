@@ -435,7 +435,7 @@ window.addEventListener('load', async function () {
         if (aplicados > 0) console.log(`✅ ${aplicados} status cargados desde Sheets`);
 
         poblarFiltros(allData);
-        construirCapas(allData);
+        
         document.getElementById('loading').style.display = 'none';
 
     } catch(err) {
