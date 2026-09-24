@@ -10,6 +10,8 @@
     <style>
         body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
         #map { height:100vh; width:100%; }
+
+        /* Marcadores animados */
         .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
         .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
         .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
@@ -19,6 +21,8 @@
         @keyframes bounce-anim { 0%{ transform:translateY(0px); } 100%{ transform:translateY(-10px); } }
         .marker-bounce-core { width:28px; height:28px; border-radius:70%; background:linear-gradient(135deg,#00C853,#00BCD4); border:3px solid white; box-shadow:0 0 10px rgba(0,200,83,0.8); display:flex; align-items:center; justify-content:center; font-size:14px; }
         .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
+
+        /* Botones de status */
         .status-btn { border:none; padding:5px 10px; margin:2px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; transition:opacity 0.2s; }
         .status-btn:hover { opacity:0.8; }
         .status-btn:disabled { opacity:0.5; cursor:wait; }
@@ -27,6 +31,8 @@
         .btn-no          { background-color:#9E9E9E; }
         .btn-contactado  { background-color:#3498db; }
         .btn-sinresp     { background-color:#f39c12; }
+
+        /* Caja de confirmación */
         .confirm-box {
             margin-top:12px; padding:12px; background:#f8f9fa;
             border:2px solid #1a5276; border-radius:8px; text-align:center; display:none;
@@ -40,6 +46,8 @@
             background:#e74c3c; color:white; border:none; padding:7px 16px;
             border-radius:5px; font-weight:bold; cursor:pointer; margin:0 4px;
         }
+
+        /* Indicador de sincronización */
         #sync-status {
             position:fixed; top:15px; right:15px; z-index:9999;
             background:white; border-radius:20px; padding:7px 14px;
@@ -53,8 +61,12 @@
         #sync-dot.saving  { background:#f39c12; animation:pulse 0.8s infinite; }
         #sync-dot.error   { background:#e74c3c; }
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+        /* Toast */
         .toast { position:fixed; top:60px; right:15px; z-index:99999; background:#27ae60; color:white; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:none; }
         .toast.error { background:#e74c3c; }
+
+        /* Loading */
         .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
         .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
         @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
@@ -65,10 +77,12 @@
     <div class="spinner"></div>
     <p style="font-weight:bold;color:#1a5276;">Cargando Base de Datos...</p>
 </div>
+
 <div id="sync-status">
     <div id="sync-dot"></div>
     <span id="sync-text">Conectando...</span>
 </div>
+
 <div id="toast" class="toast"></div>
 <div id="map"></div>
 
@@ -76,8 +90,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script>
+// ============================================================
+// URL de tu Apps Script (NO la cambies si es la misma)
+// ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec";
 
+// ============================================================
 const STATUS_CONFIG = {
     "INTERESADO":    { emoji:"📡", color:"#FF007F", grad:"linear-gradient(135deg,#FF007F,#FF6600)", tipo:"radar"  },
     "PICK UP":       { emoji:"🚀", color:"#00C853", grad:"linear-gradient(135deg,#00C853,#00BCD4)", tipo:"bounce" },
@@ -86,17 +104,21 @@ const STATUS_CONFIG = {
     "SIN RESPUESTA": { emoji:"💤", color:"#f39c12", grad:"linear-gradient(135deg,#f39c12,#d35400)", tipo:"normal" },
     "NO DISPONIBLE": { emoji:"🔒", color:"#607D8B", grad:"linear-gradient(135deg,#607D8B,#455A64)", tipo:"normal" }
 };
+
 const COLORES_CP  = ['blue','green','red','orange','purple','darkblue','cadetblue','darkgreen','pink','gray'];
 const COLORES_MUN = ['darkred','darkgreen','darkblue','purple','orange','red','green','blue','gray','black'];
 
+// ============================================================
 let map, allData = [], statusSheet = {};
 let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null, layerControl = null;
 let pendingStatus = {};
 
+// ============================================================
 function setSyncStatus(estado, texto) {
     document.getElementById('sync-dot').className = estado;
     document.getElementById('sync-text').textContent = texto;
 }
+
 function mostrarToast(msg, esError = false) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -105,16 +127,21 @@ function mostrarToast(msg, esError = false) {
     setTimeout(() => { t.style.display = 'none'; }, 2800);
 }
 
+// ============================================================
+// Leer status desde Google Sheets (GET) - FUENTE DE VERDAD
+// ============================================================
 async function cargarStatusSheet() {
     try {
         setSyncStatus('saving', 'Sincronizando...');
         const resp = await fetch(APPS_SCRIPT_URL);
         const json = await resp.json();
         if (json.ok) {
-            statusSheet = json.data;
+            statusSheet = json.data || {};
             setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
             return true;
-        } else throw new Error(json.error);
+        } else {
+            throw new Error(json.error || 'Error desconocido');
+        }
     } catch(e) {
         setSyncStatus('error', 'Sin conexión a Sheets');
         console.warn('Error al leer Sheets:', e);
@@ -122,6 +149,9 @@ async function cargarStatusSheet() {
     }
 }
 
+// ============================================================
+// Escribir status a Google Sheets (POST)
+// ============================================================
 async function guardarStatusSheet(id, newStatus) {
     try {
         const resp = await fetch(APPS_SCRIPT_URL, {
@@ -129,7 +159,7 @@ async function guardarStatusSheet(id, newStatus) {
             body: JSON.stringify({ id: id, status: newStatus })
         });
         const json = await resp.json();
-        if (!json.ok) throw new Error(json.error);
+        if (!json.ok) throw new Error(json.error || 'Error al guardar');
         statusSheet[id] = newStatus;
         setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
         return true;
@@ -140,6 +170,7 @@ async function guardarStatusSheet(id, newStatus) {
     }
 }
 
+// ============================================================
 function crearIcono(status) {
     const cfg = STATUS_CONFIG[status];
     if (!cfg) return L.icon({ iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize:[25,41], iconAnchor:[12,41] });
@@ -149,13 +180,13 @@ function crearIcono(status) {
     return L.divIcon({ className:'', html:`<div style="background:${cfg.color};width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 0 8px ${cfg.color};display:flex;align-items:center;justify-content:center;font-size:14px;">${cfg.emoji}</div>`, iconSize:[30,30], iconAnchor:[15,15] });
 }
 
-// Genera el HTML del badge (se reutiliza al actualizar)
 function crearBadgeHTML(status) {
     const cfg = STATUS_CONFIG[status];
     if (!cfg) return '';
     return `<div style="background:${cfg.grad};color:white;font-weight:bold;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${cfg.emoji} ${status}</div>`;
 }
 
+// ============================================================
 function buildPopup(row) {
     const id     = row.id;
     const status = row.status || 'SIN STATUS';
@@ -200,6 +231,9 @@ function buildPopup(row) {
         </div>`;
 }
 
+// ============================================================
+// Confirmación de cambio
+// ============================================================
 window.prepararCambio = function(id, newStatus) {
     pendingStatus[id] = newStatus;
     const box = document.getElementById(`confirm-${id}`);
@@ -225,6 +259,7 @@ window.confirmarCambio = async function(id) {
     await updateStatus(id, newStatus);
 };
 
+// ============================================================
 window.updateStatus = async function(id, newStatus) {
     const popup = document.getElementById(`popup-${id}`);
     const btns  = popup ? popup.querySelectorAll('.status-btn') : [];
@@ -235,35 +270,32 @@ window.updateStatus = async function(id, newStatus) {
     const badgeElem = document.getElementById('badge-' + id);
     const oldStatus = statusTextElem ? statusTextElem.innerText.trim() : 'DESCONOCIDO';
 
-    // 1. Actualizar texto "Status Actual"
+    // Actualizar UI inmediatamente
     if (statusTextElem) {
         statusTextElem.innerText = newStatus;
         const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12','NO DISPONIBLE':'#607D8B' };
         statusTextElem.style.color = colors[newStatus] || '#333';
     }
-
-    // 2. Actualizar el BADGE de arriba
     if (badgeElem) {
         badgeElem.innerHTML = crearBadgeHTML(newStatus);
     }
-
-    // 3. Actualizar borde izquierdo del popup
     if (popup) {
         const cfg = STATUS_CONFIG[newStatus];
         popup.style.borderLeft = cfg ? `5px solid ${cfg.color}` : 'none';
     }
 
-    // Actualizar datos en memoria
+    // Actualizar en memoria
     const dataIdx = allData.findIndex(d => d.id === id);
     if (dataIdx !== -1) allData[dataIdx].status = newStatus;
 
+    // Guardar en Sheets
     const ok = await guardarStatusSheet(id, newStatus);
     btns.forEach(b => b.disabled = false);
 
     if (ok) {
         mostrarToast(`✅ ${newStatus} guardado en Sheets`);
     } else {
-        // Revertir todo si falló
+        // Revertir si falló
         if (statusTextElem) {
             statusTextElem.innerText = oldStatus;
             const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12','NO DISPONIBLE':'#607D8B' };
@@ -279,6 +311,7 @@ window.updateStatus = async function(id, newStatus) {
     }
 };
 
+// ============================================================
 function crearMarker(row, cluster) {
     const cfg     = STATUS_CONFIG[row.status] || {};
     const tooltip = cfg.emoji ? `${cfg.emoji} ${row.status} — ${row.nom_estab}` : row.nom_estab;
@@ -289,41 +322,59 @@ function crearMarker(row, cluster) {
     return marker;
 }
 
+// ============================================================
 function construirCapas(data) {
     Object.values(cpLayers).forEach(l => map.removeLayer(l));
     Object.values(munLayers).forEach(l => map.removeLayer(l));
     Object.values(statusLayers).forEach(l => map.removeLayer(l));
     if (heatLayer) map.removeLayer(heatLayer);
     if (layerControl) layerControl.remove();
+
     cpLayers = {}; munLayers = {}; statusLayers = {};
     const byCP = {}, byMun = {}, bySt = {};
+
     data.forEach(row => {
         (byCP[row.cod_postal] = byCP[row.cod_postal] || []).push(row);
         (byMun[row.municipio] = byMun[row.municipio] || []).push(row);
         (bySt[row.status]     = bySt[row.status]     || []).push(row);
     });
+
     const overlays = {};
+
+    // Capas por CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
-        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        const cl = L.markerClusterGroup({
+            iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`)
+        });
         byCP[cp].forEach(row => crearMarker(row, cl));
         cpLayers[cp] = cl;
         overlays[`CP_${cp}`] = cl;
     });
+
+    // Capas por Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
-        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        const cl = L.markerClusterGroup({
+            iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`)
+        });
         byMun[mun].forEach(row => crearMarker(row, cl));
         munLayers[mun] = cl;
         overlays[`MUN_${mun}`] = cl;
     });
+
+    // Capas por Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
-        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
+        const cl = L.markerClusterGroup({
+            iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`)
+        });
         bySt[st].forEach(row => crearMarker(row, cl));
         statusLayers[st] = cl;
         overlays[`ST_${st}`] = cl;
     });
+
+    // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
         if (row.status === 'INTERESADO')  peso = 3;
@@ -333,24 +384,47 @@ function construirCapas(data) {
     });
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
+
+    // Mapas base (solo gratuitos, sin API key)
     const baseLayers = {
-        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',   { attribution:'&copy; CARTO' }),
-        'CartoDB Voyager':  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }),
-        'CartoDB Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',    { attribution:'&copy; CARTO' }),
-        'Satélite Esri':    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri' })
+        'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }),
+        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
+        }),
+        'CartoDB Voyager': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
+        }),
+        'CartoDB Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO'
+        })
     };
+
     layerControl = L.control.layers(baseLayers, overlays, { collapsed:false }).addTo(map);
 }
 
+// ============================================================
+// INIT - AUTÓNOMO (Sheets es la fuente de verdad del status)
+// ============================================================
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
     try {
+        // 1. Cargar datos base (ubicaciones, nombres, etc.)
         const resp = await fetch('datos.json');
         if (!resp.ok) throw new Error('No se pudo cargar datos.json');
         const data = await resp.json();
         allData = data.datos;
-        await cargarStatusSheet();
+
+        // 2. Cargar status en vivo desde Sheets (prioridad máxima)
+        const ok = await cargarStatusSheet();
+
+        // 3. Aplicar status de Sheets sobre los datos
         let aplicados = 0;
         allData.forEach(item => {
             if (statusSheet[item.id]) {
@@ -358,13 +432,19 @@ window.addEventListener('load', async function () {
                 aplicados++;
             }
         });
-        if (aplicados > 0) console.log(`✅ ${aplicados} status cargados desde Sheets`);
+
+        console.log(ok
+            ? `✅ ${aplicados} status cargados en vivo desde Sheets`
+            : '⚠️ No se pudo conectar a Sheets. Usando status del JSON');
+
+        // 4. Construir el mapa
         construirCapas(allData);
         document.getElementById('loading').style.display = 'none';
+
     } catch(err) {
         console.error(err);
         setSyncStatus('error', 'Error al cargar datos');
-        alert('Error al cargar datos.json. Verifica que el archivo existe en el repositorio.');
+        alert('Error al cargar datos.json. Verifica que el archivo existe.');
     }
 });
 </script>
