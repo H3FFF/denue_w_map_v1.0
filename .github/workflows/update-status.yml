@@ -1,0 +1,82 @@
+name: Actualizar status desde Sheets
+
+on:
+  schedule:
+    # Corre cada 2 horas (puedes cambiarlo)
+    - cron: '0 */2 * * *'
+  workflow_dispatch:  # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Actualizar datos.json con status de Sheets
+        run: |
+          python << 'EOF'
+          import json
+          import requests
+          from datetime import datetime
+
+          APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec"
+          JSON_FILE = "datos.json"
+
+          print("📡 Consultando Google Sheets...")
+          try:
+              resp = requests.get(APPS_SCRIPT_URL, timeout=30)
+              data = resp.json()
+              
+              if not data.get("ok") or not isinstance(data.get("data"), dict):
+                  print("❌ Respuesta inválida de Sheets")
+                  exit(1)
+              
+              status_sheet = data["data"]
+              print(f"✅ {len(status_sheet)} status recibidos de Sheets")
+          except Exception as e:
+              print(f"❌ Error al consultar Sheets: {e}")
+              exit(1)
+
+          # Leer el JSON actual
+          with open(JSON_FILE, "r", encoding="utf-8") as f:
+              contenido = json.load(f)
+
+          # Aplicar los status de Sheets
+          actualizados = 0
+          for item in contenido["datos"]:
+              id_str = str(item["id"])
+              if id_str in status_sheet:
+                  nuevo = str(status_sheet[id_str]).strip().upper()
+                  if nuevo and item.get("status") != nuevo:
+                      item["status"] = nuevo
+                      actualizados += 1
+
+          print(f"✅ {actualizados} registros actualizados en el JSON")
+
+          # Actualizar metadata
+          contenido["ultima_actualizacion"] = datetime.now().isoformat()
+
+          # Guardar
+          with open(JSON_FILE, "w", encoding="utf-8") as f:
+              json.dump(contenido, f, ensure_ascii=False, indent=2)
+
+          print("💾 datos.json actualizado correctamente")
+          EOF
+
+      - name: Commit y push de los cambios
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add datos.json
+          git diff --staged --quiet || git commit -m "🔄 Actualizar status desde Google Sheets $(date +'%Y-%m-%d %H:%M')"
+          git push
