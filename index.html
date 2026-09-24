@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hub Delivery MX - Mapa Interactivo</title>
 
-    <!-- Leaflet Core & Plugins -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
@@ -14,7 +13,7 @@
         body { margin:0; padding:0; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
         #map { height:100vh; width:100%; }
 
-        /* ─ Marcadores Animados (RESTAURADOS) ── */
+        /* ── Marcadores animados ── */
         .marker-radar-wrapper { position:relative; width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
         .marker-radar-core { position:absolute; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#FF007F,#FF6600); border:3px solid white; box-shadow:0 0 8px rgba(255,0,127,0.9); z-index:10; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; font-weight:bold; }
         .marker-radar-ring { position:absolute; border-radius:50%; border:3px solid #FF007F; opacity:0; animation:radar-wave 2s ease-out infinite; width:44px; height:44px; }
@@ -27,7 +26,7 @@
 
         .marker-opaco-core { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#9E9E9E,#607D8B); border:2px solid #ccc; opacity:0.85; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; }
 
-        /* ── Botones de Status en Popup ── */
+        /* ── Botones de status ── */
         .status-btn { border:none; padding:5px 10px; margin:2px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; transition:opacity 0.2s; }
         .status-btn:hover { opacity:0.8; }
         .status-btn:disabled { opacity:0.5; cursor:wait; }
@@ -37,7 +36,16 @@
         .btn-contactado  { background-color:#3498db; }
         .btn-sinresp     { background-color:#f39c12; }
 
-        /* ── Indicador de Sync (RESTAURADO) ── */
+        /* ── Panel filtros ── */
+        .filter-panel { position:absolute; bottom:30px; left:30px; z-index:1000; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); width:260px; border:3px solid #1a5276; }
+        .filter-panel h3 { margin:0 0 14px 0; color:#1a5276; font-size:15px; border-bottom:2px solid #eee; padding-bottom:8px; }
+        .filter-group { margin-bottom:10px; }
+        .filter-group label { display:block; font-size:12px; margin-bottom:4px; font-weight:bold; color:#555; }
+        .filter-group select { width:100%; padding:7px; border:2px solid #ddd; border-radius:6px; font-size:13px; background:#fff; }
+        .btn-apply { width:100%; padding:10px; background:#1a5276; color:white; border:2px solid #0d2a40; border-radius:6px; cursor:pointer; font-weight:bold; transition:background 0.3s; }
+        .btn-apply:hover { background:#2c3e50; }
+
+        /* ── Indicador de sync ── */
         #sync-status {
             position:fixed; top:15px; right:15px; z-index:9999;
             background:white; border-radius:20px; padding:7px 14px;
@@ -52,17 +60,14 @@
         #sync-dot.error   { background:#e74c3c; }
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
 
-        /* ── Toast Notifications ── */
+        /* ── Toast ── */
         .toast { position:fixed; top:60px; right:15px; z-index:99999; background:#27ae60; color:white; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:none; }
         .toast.error { background:#e74c3c; }
 
-        /* ── Loading Screen ── */
+        /* ── Loading ── */
         .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
         .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
         @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
-        
-        /* Ajuste Control de Capas */
-        .leaflet-control-layers-list { font-size: 13px; max-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body>
@@ -82,7 +87,31 @@
 
 <div id="map"></div>
 
-<!-- ⚠️ PANEL DE FILTROS ELIMINADO SEGÚN SOLICITUD ⚠️ -->
+<!-- Panel de filtros -->
+<div class="filter-panel">
+    <h3>🔍 Filtros de Búsqueda</h3>
+    <div class="filter-group">
+        <label>Municipio:</label>
+        <select id="filtro-municipio"><option value="">Todos los municipios</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Código Postal:</label>
+        <select id="filtro-cp"><option value="">Todos los CP</option></select>
+    </div>
+    <div class="filter-group">
+        <label>Status:</label>
+        <select id="filtro-status">
+            <option value="">Todos los status</option>
+            <option value="INTERESADO">📡 INTERESADO</option>
+            <option value="PICK UP">🚀 PICK UP</option>
+            <option value="CONTACTADO">📞 CONTACTADO</option>
+            <option value="SIN RESPUESTA">💤 SIN RESPUESTA</option>
+            <option value="NO INTERESADO">⛔ NO INTERESADO</option>
+            <option value="NO DISPONIBLE">🔒 NO DISPONIBLE</option>
+        </select>
+    </div>
+    <button onclick="aplicarFiltros()" class="btn-apply">Aplicar Filtros</button>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
@@ -93,12 +122,13 @@
 // ⚠️  REEMPLAZA ESTA URL con la de tu Web App de Apps Script
 // ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec";
-
-// CONFIG de status (Idéntico al original)
+// ============================================================
+// CONFIG de status (idéntico al original)
+// ============================================================
 const STATUS_CONFIG = {
     "INTERESADO":    { emoji:"📡", color:"#FF007F", grad:"linear-gradient(135deg,#FF007F,#FF6600)", tipo:"radar"  },
     "PICK UP":       { emoji:"🚀", color:"#00C853", grad:"linear-gradient(135deg,#00C853,#00BCD4)", tipo:"bounce" },
-    "NO INTERESADO": { emoji:"", color:"#9E9E9E", grad:"linear-gradient(135deg,#9E9E9E,#607D8B)", tipo:"opaco"  },
+    "NO INTERESADO": { emoji:"⛔", color:"#9E9E9E", grad:"linear-gradient(135deg,#9E9E9E,#607D8B)", tipo:"opaco"  },
     "CONTACTADO":    { emoji:"📞", color:"#3498db", grad:"linear-gradient(135deg,#3498db,#2980b9)", tipo:"normal" },
     "SIN RESPUESTA": { emoji:"💤", color:"#f39c12", grad:"linear-gradient(135deg,#f39c12,#d35400)", tipo:"normal" },
     "NO DISPONIBLE": { emoji:"🔒", color:"#607D8B", grad:"linear-gradient(135deg,#607D8B,#455A64)", tipo:"normal" }
@@ -107,15 +137,19 @@ const STATUS_CONFIG = {
 const COLORES_CP  = ['blue','green','red','orange','purple','darkblue','cadetblue','darkgreen','pink','gray'];
 const COLORES_MUN = ['darkred','darkgreen','darkblue','purple','orange','red','green','blue','gray','black'];
 
+// ============================================================
 // Estado global
+// ============================================================
 let map, allData = [], statusSheet = {};
 let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null, layerControl = null;
 
+// ============================================================
 // UI helpers
+// ============================================================
 function setSyncStatus(estado, texto) {
     const dot  = document.getElementById('sync-dot');
     const txt  = document.getElementById('sync-text');
-    dot.className = estado;
+    dot.className = estado;   // 'ok' | 'saving' | 'error' | ''
     txt.textContent = texto;
 }
 
@@ -127,17 +161,21 @@ function mostrarToast(msg, esError = false) {
     setTimeout(() => { t.style.display = 'none'; }, 2800);
 }
 
+// ============================================================
 // Leer status desde Google Sheets (GET)
+// ============================================================
 async function cargarStatusSheet() {
     try {
         setSyncStatus('saving', 'Sincronizando...');
         const resp = await fetch(APPS_SCRIPT_URL);
         const json = await resp.json();
         if (json.ok) {
-            statusSheet = json.data;
+            statusSheet = json.data;  // { "id123": "INTERESADO", ... }
             setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
             return true;
-        } else { throw new Error(json.error); }
+        } else {
+            throw new Error(json.error);
+        }
     } catch(e) {
         setSyncStatus('error', 'Sin conexión a Sheets');
         console.warn('Error al leer Sheets:', e);
@@ -145,7 +183,9 @@ async function cargarStatusSheet() {
     }
 }
 
+// ============================================================
 // Escribir status a Google Sheets (POST)
+// ============================================================
 async function guardarStatusSheet(id, newStatus) {
     try {
         const resp = await fetch(APPS_SCRIPT_URL, {
@@ -164,19 +204,23 @@ async function guardarStatusSheet(id, newStatus) {
     }
 }
 
-// Crear icono animado (RESTAURADO)
+// ============================================================
+// Crear icono (idéntico al original)
+// ============================================================
 function crearIcono(status) {
     const cfg = STATUS_CONFIG[status];
     if (!cfg) return L.icon({ iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', iconSize:[25,41], iconAnchor:[12,41] });
 
     if (cfg.tipo === 'radar') return L.divIcon({ className:'', html:"<div class='marker-radar-wrapper'><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-ring'></div><div class='marker-radar-core'>!</div></div>", iconSize:[44,44], iconAnchor:[22,22] });
-    if (cfg.tipo === 'bounce') return L.divIcon({ className:'', html:"<div class='marker-bounce-wrapper'><div class='marker-bounce-core'></div></div>", iconSize:[34,34], iconAnchor:[17,17] });
+    if (cfg.tipo === 'bounce') return L.divIcon({ className:'', html:"<div class='marker-bounce-wrapper'><div class='marker-bounce-core'>🚀</div></div>", iconSize:[34,34], iconAnchor:[17,17] });
     if (cfg.tipo === 'opaco')  return L.divIcon({ className:'', html:"<div class='marker-opaco-core'>⛔</div>", iconSize:[22,22], iconAnchor:[11,11] });
 
     return L.divIcon({ className:'', html:`<div style="background:${cfg.color};width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 0 8px ${cfg.color};display:flex;align-items:center;justify-content:center;font-size:14px;">${cfg.emoji}</div>`, iconSize:[30,30], iconAnchor:[15,15] });
 }
 
-// Popup con botones de acción (RESTAURADO)
+// ============================================================
+// Popup (idéntico al original Python build_popup)
+// ============================================================
 function buildPopup(row) {
     const id     = row.id;
     const status = row.status || 'SIN STATUS';
@@ -220,40 +264,47 @@ function buildPopup(row) {
         </div>`;
 }
 
-// updateStatus — guarda en Sheets + actualiza popup (OPTIMISTIC UPDATE)
+// ============================================================
+// updateStatus — guarda en Sheets + actualiza popup
+// ============================================================
 window.updateStatus = async function(id, newStatus) {
+    // Deshabilitar botones del popup mientras guarda
     const popup = document.getElementById(`popup-${id}`);
     const btns  = popup ? popup.querySelectorAll('.status-btn') : [];
     btns.forEach(b => b.disabled = true);
     setSyncStatus('saving', 'Guardando...');
 
+    // Actualizar UI de inmediato (optimistic update)
     const statusTextElem = document.getElementById('status-text-' + id);
     const oldStatus = statusTextElem ? statusTextElem.innerText.trim() : 'DESCONOCIDO';
-    
-    // Actualización visual inmediata
     if (statusTextElem) {
         statusTextElem.innerText = newStatus;
         const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12' };
         statusTextElem.style.color = colors[newStatus] || '#333';
     }
 
+    // Actualizar datos en memoria
     const dataIdx = allData.findIndex(d => d.id === id);
     if (dataIdx !== -1) allData[dataIdx].status = newStatus;
 
+    // Guardar en Google Sheets
     const ok = await guardarStatusSheet(id, newStatus);
+
     btns.forEach(b => b.disabled = false);
 
     if (ok) {
         mostrarToast(`✅ ${newStatus} guardado en Sheets`);
     } else {
-        // Revertir si falló
+        // Revertir UI si falló
         if (statusTextElem) statusTextElem.innerText = oldStatus;
         if (dataIdx !== -1) allData[dataIdx].status = oldStatus;
         mostrarToast('❌ Error al guardar. Intenta de nuevo.', true);
     }
 };
 
-// Crear marcador con clustering
+// ============================================================
+// Crear marcador
+// ============================================================
 function crearMarker(row, cluster) {
     const cfg     = STATUS_CONFIG[row.status] || {};
     const tooltip = cfg.emoji ? `${cfg.emoji} ${row.status} — ${row.nom_estab}` : row.nom_estab;
@@ -264,14 +315,15 @@ function crearMarker(row, cluster) {
     return marker;
 }
 
-// Construir capas dinámicas (CP / Municipio / Status / Heatmap)
+// ============================================================
+// Construir capas (CP / Municipio / Status / Heatmap)
+// ============================================================
 function construirCapas(data) {
     Object.values(cpLayers).forEach(l => map.removeLayer(l));
     Object.values(munLayers).forEach(l => map.removeLayer(l));
     Object.values(statusLayers).forEach(l => map.removeLayer(l));
     if (heatLayer) map.removeLayer(heatLayer);
-    if (layerControl) map.removeControl(layerControl);
-    
+    if (layerControl) layerControl.remove();
     cpLayers = {}; munLayers = {}; statusLayers = {};
 
     const byCP = {}, byMun = {}, bySt = {};
@@ -283,15 +335,10 @@ function construirCapas(data) {
 
     const overlays = {};
 
-    // Helper para crear clusters coloreados
-    const createClusterIcon = (color) => {
-        return new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`);
-    };
-
     // Capas CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
-        const cl = L.markerClusterGroup({ iconCreateFunction: createClusterIcon(color) });
+        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
         byCP[cp].forEach(row => crearMarker(row, cl));
         cpLayers[cp] = cl;
         overlays[`CP_${cp}`] = cl;
@@ -300,7 +347,7 @@ function construirCapas(data) {
     // Capas Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
-        const cl = L.markerClusterGroup({ iconCreateFunction: createClusterIcon(color) });
+        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
         byMun[mun].forEach(row => crearMarker(row, cl));
         munLayers[mun] = cl;
         overlays[`MUN_${mun}`] = cl;
@@ -309,13 +356,13 @@ function construirCapas(data) {
     // Capas Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
-        const cl = L.markerClusterGroup({ iconCreateFunction: createClusterIcon(color) });
+        const cl = L.markerClusterGroup({ iconCreateFunction: new Function('cluster', `return L.divIcon({html:'<div style="background:${color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);">'+cluster.getChildCount()+'</div>',className:'marker-cluster-custom',iconSize:L.point(40,40)});`) });
         bySt[st].forEach(row => crearMarker(row, cl));
         statusLayers[st] = cl;
         overlays[`ST_${st}`] = cl;
     });
 
-    // Heatmap (Zona de Calor)
+    // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
         if (row.status === 'INTERESADO')  peso = 3;
@@ -326,36 +373,58 @@ function construirCapas(data) {
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
 
-    // Mapas Base OPEN SOURCE (Sin API Key)
     const baseLayers = {
-        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',   { attribution:'&copy; CARTO & OSM' }),
-        'CartoDB Voyager':  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO & OSM' }),
-        'CartoDB Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',    { attribution:'&copy; CARTO & OSM' }),
+        'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',   { attribution:'&copy; CARTO' }),
+        'CartoDB Voyager':  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }),
+        'CartoDB Dark':     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',    { attribution:'&copy; CARTO' }),
         'Satélite Esri':    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution:'&copy; Esri' })
     };
-    
-    layerControl = L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
+    layerControl = L.control.layers(baseLayers, overlays, { collapsed:false }).addTo(map);
 }
 
+// ============================================================
+// Filtros
+// ============================================================
+function poblarFiltros(data) {
+    const muns = [...new Set(data.map(d => d.municipio))].sort();
+    const cps  = [...new Set(data.map(d => d.cod_postal))].sort();
+    const selMun = document.getElementById('filtro-municipio');
+    const selCP  = document.getElementById('filtro-cp');
+    selMun.innerHTML = '<option value="">Todos los municipios</option>';
+    selCP.innerHTML  = '<option value="">Todos los CP</option>';
+    muns.forEach(m => { if (m && m !== 'No disponible') { const o=document.createElement('option'); o.value=m; o.textContent=m; selMun.appendChild(o); } });
+    cps.forEach(c  => { if (c && c !== 'No disponible') { const o=document.createElement('option'); o.value=c; o.textContent=c; selCP.appendChild(o);  } });
+}
+
+function aplicarFiltros() {
+    const municipio = document.getElementById('filtro-municipio').value;
+    const cp        = document.getElementById('filtro-cp').value;
+    const status    = document.getElementById('filtro-status').value;
+    let filtered = allData;
+    if (municipio) filtered = filtered.filter(d => d.municipio  === municipio);
+    if (cp)        filtered = filtered.filter(d => d.cod_postal  === cp);
+    if (status)    filtered = filtered.filter(d => d.status      === status);
+    construirCapas(filtered);
+}
+
+// ============================================================
 // INIT
+// ============================================================
 window.addEventListener('load', async function () {
-    // Inicializar mapa con vista a CDMX por defecto
     map = L.map('map').setView([19.4326, -99.1332], 11);
-    
-    // Cargar capa base por defecto (Open Source)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'&copy; CARTO' }).addTo(map);
 
     try {
-        // 1. Cargar datos locales
+        // 1. Cargar datos del mapa (GitHub Pages)
         const resp = await fetch('datos.json');
         if (!resp.ok) throw new Error('No se pudo cargar datos.json');
         const data = await resp.json();
         allData = data.datos;
 
-        // 2. Sincronizar con Google Sheets
+        // 2. Cargar status actualizados desde Google Sheets
         await cargarStatusSheet();
 
-        // 3. Fusionar status de Sheets sobre datos locales
+        // 3. Aplicar status de Sheets sobre los datos
         let aplicados = 0;
         allData.forEach(item => {
             if (statusSheet[item.id]) {
@@ -365,14 +434,14 @@ window.addEventListener('load', async function () {
         });
         if (aplicados > 0) console.log(`✅ ${aplicados} status cargados desde Sheets`);
 
-        // 4. Renderizar capas
+        poblarFiltros(allData);
         construirCapas(allData);
         document.getElementById('loading').style.display = 'none';
 
     } catch(err) {
         console.error(err);
         setSyncStatus('error', 'Error al cargar datos');
-        alert('Error al cargar datos.json. Verifica que el archivo existe.');
+        alert('Error al cargar datos.json. Verifica que el archivo existe en el repositorio.');
     }
 });
 </script>
