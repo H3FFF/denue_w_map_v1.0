@@ -8,32 +8,29 @@ import urllib.request
 from datetime import datetime
 import os
 
-# ============================================
-# CONFIGURACIÓN
-# ============================================
+
 ARCHIVO_EXCEL = "DENUE 2026.xlsx"
 ARCHIVO_JSON  = "datos.json"
-ARCHIVO_CAMBIOS = "cambios_status.json"   # opcional (exportado desde el navegador)
+ARCHIVO_CAMBIOS = "cambios_status.json" 
 
-# URL de tu Apps Script (la misma del mapa)
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec"
 
 def cargar_status_desde_sheets():
     """Obtiene el diccionario {id: status} desde Google Sheets vía Apps Script."""
     try:
-        print("📡 Consultando status actual desde Google Sheets...")
+        print(" Consultando status actual desde Google Sheets...")
         with urllib.request.urlopen(APPS_SCRIPT_URL, timeout=30) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         
         if data.get("ok") and isinstance(data.get("data"), dict):
             status_dict = data["data"]
-            print(f"✅ {len(status_dict)} status cargados desde Sheets")
+            print(f" {len(status_dict)} status cargados desde Sheets")
             return status_dict
         else:
-            print("⚠️  Respuesta de Sheets no válida:", data)
+            print("  Respuesta de Sheets no válida:", data)
             return {}
     except Exception as e:
-        print(f"❌ Error al consultar Sheets: {e}")
+        print(f" Error al consultar Sheets: {e}")
         return {}
 
 def cargar_cambios_guardados():
@@ -43,25 +40,25 @@ def cargar_cambios_guardados():
     try:
         with open(ARCHIVO_CAMBIOS, 'r', encoding='utf-8') as f:
             cambios = json.load(f)
-        print(f"📋 {len(cambios)} cambios de status encontrados en {ARCHIVO_CAMBIOS}")
+        print(f" {len(cambios)} cambios de status encontrados en {ARCHIVO_CAMBIOS}")
         return cambios
     except Exception as e:
-        print(f"⚠️  No se pudo leer {ARCHIVO_CAMBIOS}: {e}")
+        print(f"  No se pudo leer {ARCHIVO_CAMBIOS}: {e}")
         return {}
 
 def generar_json():
     if not os.path.exists(ARCHIVO_EXCEL):
-        print(f"❌ Error: No se encontró {ARCHIVO_EXCEL}")
+        print(f" Error: No se encontró {ARCHIVO_EXCEL}")
         return
 
     try:
         df = pd.read_excel(ARCHIVO_EXCEL)
     except Exception as e:
-        print(f"❌ Error al leer Excel: {e}")
+        print(f" Error al leer Excel: {e}")
         return
 
     if 'id' not in df.columns:
-        print("❌ ERROR: No se encontró la columna 'id'")
+        print(" ERROR: No se encontró la columna 'id'")
         return
 
     # ─── Limpieza básica ─────────────────────────────────────────────────────
@@ -126,7 +123,6 @@ def generar_json():
     if "telefono" in df.columns:
         df['whatsapp_link'] = df.apply(generar_link_whatsapp, axis=1)
 
-    # ─── Detectar columna de municipio ───────────────────────────────────────
     municipio_col = None
     for col_alt in ['municipio', 'nom_mun', 'mun', 'municipio_nombre']:
         if col_alt in df.columns:
@@ -135,7 +131,6 @@ def generar_json():
     if municipio_col:
         df['municipio'] = df[municipio_col].astype(str).str.strip()
 
-    # ─── 1. APLICAR CAMBIOS DESDE SHEETS (prioridad más alta) ────────────────
     status_sheets = cargar_status_desde_sheets()
     if status_sheets:
         actualizados_sheets = 0
@@ -146,9 +141,9 @@ def generar_json():
                 if nuevo and nuevo != "NAN":
                     df.at[idx, 'status'] = nuevo
                     actualizados_sheets += 1
-        print(f"✅ {actualizados_sheets} registros actualizados con status de Sheets")
+        print(f" {actualizados_sheets} registros actualizados con status de Sheets")
 
-    # ─── 2. APLICAR CAMBIOS LOCALES (si existen) ─────────────────────────────
+
     cambios = cargar_cambios_guardados()
     if cambios:
         actualizados = 0
@@ -157,24 +152,22 @@ def generar_json():
             if id_str in cambios:
                 df.at[idx, 'status'] = cambios[id_str].get('nuevo', cambios[id_str])
                 actualizados += 1
-        print(f"✅ {actualizados} registros actualizados con cambios locales")
+        print(f" {actualizados} registros actualizados con cambios locales")
 
         try:
             os.rename(ARCHIVO_CAMBIOS,
                       ARCHIVO_CAMBIOS.replace('.json', '_aplicado.json'))
-            print(f"🗂️  {ARCHIVO_CAMBIOS} renombrado a *_aplicado.json")
+            print(f"  {ARCHIVO_CAMBIOS} renombrado a *_aplicado.json")
         except Exception as e:
-            print(f"⚠️  No se pudo renombrar {ARCHIVO_CAMBIOS}: {e}")
+            print(f"  No se pudo renombrar {ARCHIVO_CAMBIOS}: {e}")
 
-    # ─── Guardar Excel actualizado (opcional pero recomendado) ───────────────
     try:
         df.to_excel(ARCHIVO_EXCEL, index=False)
-        print(f"💾 Excel actualizado: {ARCHIVO_EXCEL}")
+        print(f" Excel actualizado: {ARCHIVO_EXCEL}")
     except Exception as e:
-        print(f"⚠️  No se pudo actualizar el Excel: {e}")
+        print(f"  No se pudo actualizar el Excel: {e}")
 
-    # ─── GENERAR JSON ─────────────────────────────────────────────────────────
-    registros = []
+   
     for _, row in df.iterrows():
         registro = {
             "id":            str(row['id']),
@@ -200,8 +193,6 @@ def generar_json():
             "datos":                registros
         }, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✅ JSON generado: {ARCHIVO_JSON} ({len(registros)} registros)")
-    print("   → Ahora el JSON ya contiene los status actualizados de Google Sheets.")
 
 if __name__ == "__main__":
     generar_json()
