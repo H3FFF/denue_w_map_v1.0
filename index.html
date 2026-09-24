@@ -385,16 +385,6 @@ function construirCapas(data) {
 // ============================================================
 // Filtros
 // ============================================================
-function poblarFiltros(data) {
-    const muns = [...new Set(data.map(d => d.municipio))].sort();
-    const cps  = [...new Set(data.map(d => d.cod_postal))].sort();
-    const selMun = document.getElementById('filtro-municipio');
-    const selCP  = document.getElementById('filtro-cp');
-    selMun.innerHTML = '<option value="">Todos los municipios</option>';
-    selCP.innerHTML  = '<option value="">Todos los CP</option>';
-    muns.forEach(m => { if (m && m !== 'No disponible') { const o=document.createElement('option'); o.value=m; o.textContent=m; selMun.appendChild(o); } });
-    cps.forEach(c  => { if (c && c !== 'No disponible') { const o=document.createElement('option'); o.value=c; o.textContent=c; selCP.appendChild(o);  } });
-}
 
 function aplicarFiltros() {
     const municipio = document.getElementById('filtro-municipio').value;
