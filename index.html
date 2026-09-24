@@ -74,7 +74,7 @@
         @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
         #last-update { font-size:10px; font-weight:normal; color:#666; margin-top:2px; text-align:center; }
 
-        /* Toast - centrado */
+        /* Toast */
         .toast {
             position: fixed;
             top: 70px;
@@ -96,6 +96,94 @@
         .loading { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999; background:white; padding:30px; border-radius:15px; box-shadow:0 10px 25px rgba(0,0,0,0.3); text-align:center; border:4px solid #1a5276; }
         .spinner { border:5px solid #f3f3f3; border-top:5px solid #1a5276; border-radius:50%; width:50px; height:50px; animation:spin 1s linear infinite; margin:0 auto 15px; }
         @keyframes spin { 0%{ transform:rotate(0deg); } 100%{ transform:rotate(360deg); } }
+
+        /* ===== BOTÓN Y MODAL DE CAMBIOS ===== */
+        #btn-cambios {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 9999;
+            background: #1a5276;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #btn-cambios:hover { background: #2c3e50; }
+
+        #modal-cambios {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-cambios.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+            max-height: 70vh;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            background: #1a5276;
+            color: white;
+            padding: 14px 18px;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-body {
+            padding: 16px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .cambio-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cambio-item:last-child { border-bottom: none; }
+        .cambio-id { color: #666; font-size: 12px; }
+        .cambio-status {
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: white;
+            font-size: 11px;
+        }
+        .sin-cambios {
+            text-align: center;
+            color: #888;
+            padding: 30px 10px;
+        }
     </style>
 </head>
 <body>
@@ -115,6 +203,24 @@
 <div id="toast" class="toast"></div>
 <div id="map"></div>
 
+<!-- Botón Ver cambios -->
+<button id="btn-cambios" onclick="abrirModalCambios()">
+    📋 Ver cambios
+</button>
+
+<!-- Modal de cambios -->
+<div id="modal-cambios">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>Cambios desde Sheets</span>
+            <button onclick="cerrarModalCambios()">×</button>
+        </div>
+        <div class="modal-body" id="lista-cambios">
+            <div class="sin-cambios">Cargando...</div>
+        </div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
@@ -122,7 +228,6 @@
 // ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwIRiMnSRsLpsdCUP_48_3eqVRdFF5ve0Jn32502JCkSnEf43ho0KWdcza_n3p1s-6xw/exec";
 
-// ============================================================
 const STATUS_CONFIG = {
     "INTERESADO":    { emoji:"📡", color:"#FF007F", grad:"linear-gradient(135deg,#FF007F,#FF6600)", tipo:"radar"  },
     "PICK UP":       { emoji:"🚀", color:"#00C853", grad:"linear-gradient(135deg,#00C853,#00BCD4)", tipo:"bounce" },
@@ -135,10 +240,10 @@ const STATUS_CONFIG = {
 const COLORES_CP  = ['blue','green','red','orange','purple','darkblue','cadetblue','darkgreen','pink','gray'];
 const COLORES_MUN = ['darkred','darkgreen','darkblue','purple','orange','red','green','blue','gray','black'];
 
-// ============================================================
 let map, allData = [], statusSheet = {};
 let cpLayers = {}, munLayers = {}, statusLayers = {}, heatLayer = null, layerControl = null;
 let pendingStatus = {};
+let cambiosAplicados = [];   // Lista de cambios para el modal
 
 // ============================================================
 function setSyncStatus(estado, texto) {
@@ -162,6 +267,39 @@ function mostrarToast(msg, esError = false) {
 }
 
 // ============================================================
+// Modal de cambios
+// ============================================================
+function abrirModalCambios() {
+    const lista = document.getElementById('lista-cambios');
+    
+    if (cambiosAplicados.length === 0) {
+        lista.innerHTML = '<div class="sin-cambios">No hay cambios recientes desde Sheets</div>';
+    } else {
+        let html = '';
+        cambiosAplicados.forEach(c => {
+            const color = STATUS_CONFIG[c.status] ? STATUS_CONFIG[c.status].color : '#666';
+            html += `
+                <div class="cambio-item">
+                    <span class="cambio-id">ID: ${c.id}</span>
+                    <span class="cambio-status" style="background:${color}">${c.status}</span>
+                </div>`;
+        });
+        lista.innerHTML = html;
+    }
+    
+    document.getElementById('modal-cambios').classList.add('active');
+}
+
+function cerrarModalCambios() {
+    document.getElementById('modal-cambios').classList.remove('active');
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modal-cambios').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalCambios();
+});
+
+// ============================================================
 async function cargarStatusSheet() {
     try {
         setSyncStatus('saving', 'Sincronizando...');
@@ -183,7 +321,6 @@ async function cargarStatusSheet() {
             const cantidad = Object.keys(statusSheet).length;
             setSyncStatus('ok', `Sincronizado · ${cantidad} registros`);
             actualizarUltimaActualizacion();
-            console.log('Status aplicados desde Sheets:', statusSheet);
             return true;
         } else {
             throw new Error(json.error || 'Respuesta no válida');
@@ -195,7 +332,6 @@ async function cargarStatusSheet() {
     }
 }
 
-// ============================================================
 async function guardarStatusSheet(id, newStatus) {
     try {
         const resp = await fetch(APPS_SCRIPT_URL, {
@@ -207,6 +343,11 @@ async function guardarStatusSheet(id, newStatus) {
         statusSheet[id] = newStatus;
         setSyncStatus('ok', `Sincronizado · ${Object.keys(statusSheet).length} registros`);
         actualizarUltimaActualizacion();
+        
+        // Agregar al log de cambios
+        cambiosAplicados.unshift({ id: id, status: newStatus });
+        if (cambiosAplicados.length > 50) cambiosAplicados.pop();
+        
         return true;
     } catch(e) {
         setSyncStatus('error', 'Error al guardar');
@@ -231,7 +372,6 @@ function crearBadgeHTML(status) {
     return `<div style="background:${cfg.grad};color:white;font-weight:bold;padding:5px 12px;border-radius:20px;display:inline-block;margin-bottom:8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${cfg.emoji} ${status}</div>`;
 }
 
-// ============================================================
 function buildPopup(row) {
     const id     = row.id;
     const status = row.status || 'SIN STATUS';
@@ -276,7 +416,6 @@ function buildPopup(row) {
         </div>`;
 }
 
-// ============================================================
 window.prepararCambio = function(id, newStatus) {
     pendingStatus[id] = newStatus;
     const box = document.getElementById(`confirm-${id}`);
@@ -302,7 +441,6 @@ window.confirmarCambio = async function(id) {
     await updateStatus(id, newStatus);
 };
 
-// ============================================================
 window.updateStatus = async function(id, newStatus) {
     const popup = document.getElementById(`popup-${id}`);
     const btns  = popup ? popup.querySelectorAll('.status-btn') : [];
@@ -318,9 +456,7 @@ window.updateStatus = async function(id, newStatus) {
         const colors = { 'INTERESADO':'#FF007F','PICK UP':'#00C853','NO INTERESADO':'#9E9E9E','CONTACTADO':'#3498db','SIN RESPUESTA':'#f39c12','NO DISPONIBLE':'#607D8B' };
         statusTextElem.style.color = colors[newStatus] || '#333';
     }
-    if (badgeElem) {
-        badgeElem.innerHTML = crearBadgeHTML(newStatus);
-    }
+    if (badgeElem) badgeElem.innerHTML = crearBadgeHTML(newStatus);
     if (popup) {
         const cfg = STATUS_CONFIG[newStatus];
         popup.style.borderLeft = cfg ? `5px solid ${cfg.color}` : 'none';
@@ -350,7 +486,6 @@ window.updateStatus = async function(id, newStatus) {
     }
 };
 
-// ============================================================
 function crearMarker(row, cluster) {
     const cfg     = STATUS_CONFIG[row.status] || {};
     const tooltip = cfg.emoji ? `${cfg.emoji} ${row.status} — ${row.nom_estab}` : row.nom_estab;
@@ -361,7 +496,6 @@ function crearMarker(row, cluster) {
     return marker;
 }
 
-// ============================================================
 function construirCapas(data) {
     Object.values(cpLayers).forEach(l => map.removeLayer(l));
     Object.values(munLayers).forEach(l => map.removeLayer(l));
@@ -380,7 +514,6 @@ function construirCapas(data) {
 
     const overlays = {};
 
-    // Capas por CP
     Object.keys(byCP).sort().forEach((cp, i) => {
         const color = COLORES_CP[i % COLORES_CP.length];
         const cl = L.markerClusterGroup({
@@ -391,7 +524,6 @@ function construirCapas(data) {
         overlays[`CP_${cp}`] = cl;
     });
 
-    // Capas por Municipio
     Object.keys(byMun).sort().forEach((mun, i) => {
         const color = COLORES_MUN[i % COLORES_MUN.length];
         const cl = L.markerClusterGroup({
@@ -402,7 +534,6 @@ function construirCapas(data) {
         overlays[`MUN_${mun}`] = cl;
     });
 
-    // Capas por Status
     Object.keys(bySt).sort().forEach(st => {
         const color = STATUS_CONFIG[st] ? STATUS_CONFIG[st].color : '#607D8B';
         const cl = L.markerClusterGroup({
@@ -413,7 +544,6 @@ function construirCapas(data) {
         overlays[`ST_${st}`] = cl;
     });
 
-    // Heatmap
     const heatData = data.map(row => {
         let peso = 1;
         if (row.status === 'INTERESADO')  peso = 3;
@@ -424,7 +554,6 @@ function construirCapas(data) {
     heatLayer = L.heatLayer(heatData, { minOpacity:0.3, maxZoom:18, radius:15, blur:10, gradient:{0.2:'blue',0.4:'cyan',0.6:'lime',0.8:'yellow',1.0:'red'} });
     overlays['Zona de Calor'] = heatLayer;
 
-    // Solo OpenStreetMap
     const baseLayers = {
         'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap'
@@ -438,7 +567,6 @@ function construirCapas(data) {
 window.addEventListener('load', async function () {
     map = L.map('map').setView([19.4326, -99.1332], 11);
 
-    // Solo OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
@@ -451,17 +579,21 @@ window.addEventListener('load', async function () {
 
         const ok = await cargarStatusSheet();
 
-        let aplicados = 0;
+        // Aplicar status y guardar lista de cambios
+        cambiosAplicados = [];
         allData.forEach(item => {
             if (statusSheet[item.id]) {
-                item.status = statusSheet[item.id];
-                aplicados++;
+                const nuevo = statusSheet[item.id];
+                if (item.status !== nuevo) {
+                    cambiosAplicados.push({ id: item.id, status: nuevo });
+                }
+                item.status = nuevo;
             }
         });
 
         console.log(ok
-            ? `✅ ${aplicados} status cargados en vivo desde Sheets`
-            : '⚠️ No se pudo conectar a Sheets. Usando status del JSON');
+            ? `✅ ${cambiosAplicados.length} cambios aplicados desde Sheets`
+            : '⚠️ No se pudo conectar a Sheets');
 
         construirCapas(allData);
         document.getElementById('loading').style.display = 'none';
@@ -469,7 +601,7 @@ window.addEventListener('load', async function () {
     } catch(err) {
         console.error(err);
         setSyncStatus('error', 'Error al cargar datos');
-        alert('Error al cargar datos.json. Verifica que el archivo existe.');
+        alert('Error al cargar datos.json');
     }
 });
 </script>
