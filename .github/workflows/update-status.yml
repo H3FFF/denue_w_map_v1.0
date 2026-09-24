@@ -2,9 +2,12 @@ name: Actualizar status desde Sheets
 
 on:
   schedule:
-    # Corre cada 2 horas (puedes cambiarlo)
+    # Corre cada 2 horas
     - cron: '0 */2 * * *'
-  workflow_dispatch:  # Permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:  # Permite ejecutarlo manualmente
+
+permissions:
+  contents: write   # ← Esto es lo que faltaba
 
 jobs:
   update:
@@ -13,6 +16,8 @@ jobs:
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Python
         uses: actions/setup-python@v5
